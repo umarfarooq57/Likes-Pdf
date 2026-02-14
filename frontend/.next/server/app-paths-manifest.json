@@ -1,0 +1,4 @@
+{
+  "/tools/pdf-to-images/page": "app/tools/pdf-to-images/page.js",
+  "/tools/page": "app/tools/page.js"
+}
