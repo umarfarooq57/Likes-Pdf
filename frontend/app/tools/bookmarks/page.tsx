@@ -33,9 +33,9 @@ export default function BookmarksPDFPage() {
         const file = files[0];
         try {
             const result = await documentsApi.upload(file);
-            setDocumentId(result.id);
+            setDocumentId(result.id || null);
             setFileName(result.filename);
-            setTotalPages(result.page_count || 50);
+            setTotalPages(50); // Default page count
             toast.success('File uploaded successfully');
         } catch (error) {
             toast.error('Failed to upload file');

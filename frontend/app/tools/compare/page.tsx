@@ -28,7 +28,7 @@ export default function ComparePDFPage() {
         const file = files[0];
         try {
             const result = await documentsApi.upload(file);
-            setFile1Id(result.id);
+            setFile1Id(result.id || null);
             setFile1Name(result.filename);
             toast.success('First file uploaded');
         } catch (error) {
@@ -41,7 +41,7 @@ export default function ComparePDFPage() {
         const file = files[0];
         try {
             const result = await documentsApi.upload(file);
-            setFile2Id(result.id);
+            setFile2Id(result.id || null);
             setFile2Name(result.filename);
             toast.success('Second file uploaded');
         } catch (error) {

@@ -28,7 +28,7 @@ export default function MergePDFPage() {
                 const result = await documentsApi.upload(file);
                 setFiles((prev) => [
                     ...prev,
-                    { id: result.id, filename: result.filename, size: result.size },
+                    { id: result.id || `temp-${Date.now()}`, filename: result.filename, size: result.size },
                 ]);
                 toast.success(`${file.name} uploaded`);
             } catch (error) {

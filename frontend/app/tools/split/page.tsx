@@ -27,9 +27,9 @@ export default function SplitPDFPage() {
 
         try {
             const result = await documentsApi.upload(file);
-            setDocumentId(result.id);
+            setDocumentId(result.id || null);
             setFileName(result.filename);
-            setPageCount(result.page_count || 10); // Default to 10 if not provided
+            setPageCount(10); // Default page count
             toast.success('File uploaded successfully');
         } catch (error) {
             toast.error('Failed to upload file');

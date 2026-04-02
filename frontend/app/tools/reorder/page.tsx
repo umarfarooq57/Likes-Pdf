@@ -30,11 +30,12 @@ export default function ReorderPage() {
 
         try {
             const result = await documentsApi.upload(file);
-            setDocumentId(result.id);
+            setDocumentId(result.id || null);
             setFileName(result.filename);
 
             // Get thumbnails
             try {
+                if (!result.id) throw new Error('Document ID not available');
                 const thumbnails = await securityApi.getThumbnails(result.id, 'all', 150);
                 const pageItems: PageItem[] = thumbnails.thumbnails.map((thumb: string, index: number) => ({
                     pageNumber: index + 1,
@@ -45,7 +46,7 @@ export default function ReorderPage() {
                 setPages(pageItems);
             } catch {
                 // Fallback: create page items without thumbnails
-                const pageCount = result.page_count || 5;
+                const pageCount = 5;
                 setPages(Array.from({ length: pageCount }, (_, i) => ({ pageNumber: i + 1 })));
             }
 

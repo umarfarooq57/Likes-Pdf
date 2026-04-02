@@ -117,7 +117,9 @@ export default function FileDropzone({
             );
 
             if (onFileUploaded) {
-                onFileUploaded(response.id, uploadedFile.file);
+                if (response.id) {
+                    onFileUploaded(response.id, uploadedFile.file);
+                }
             }
         } catch (error: any) {
             // Mark as error

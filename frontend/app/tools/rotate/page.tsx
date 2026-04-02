@@ -26,9 +26,9 @@ export default function RotatePDFPage() {
 
         try {
             const result = await documentsApi.upload(file);
-            setDocumentId(result.id);
+            setDocumentId(result.id || null);
             setFileName(result.filename);
-            setPageCount(result.page_count || 10);
+            setPageCount(10);
             toast.success('File uploaded successfully');
         } catch (error) {
             toast.error('Failed to upload file');

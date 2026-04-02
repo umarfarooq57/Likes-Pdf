@@ -24,7 +24,7 @@ export default function PDFToExcelPage() {
         const file = files[0];
         try {
             const result = await documentsApi.upload(file);
-            setDocumentId(result.id);
+            setDocumentId(result.id || null);
             setFileName(result.filename);
             toast.success('File uploaded successfully');
         } catch (error) {

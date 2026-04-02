@@ -26,7 +26,7 @@ export default function ImagesToPDFPage() {
                 const result = await documentsApi.upload(file);
                 setImages((prev) => [
                     ...prev,
-                    { id: result.id, filename: result.filename, size: result.size },
+                    { id: result.id || `temp-${Date.now()}`, filename: result.filename, size: result.size },
                 ]);
                 toast.success(`${file.name} uploaded`);
             } catch (error) {

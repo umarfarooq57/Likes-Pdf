@@ -54,9 +54,9 @@ export default function PDFEditorPage() {
 
         try {
             const result = await documentsApi.upload(file);
-            setDocumentId(result.id);
+            setDocumentId(result.id || null);
             setFileName(result.filename);
-            setTotalPages(result.page_count || 5);
+            setTotalPages(5);
             toast.success('PDF loaded successfully');
         } catch (error) {
             toast.error('Failed to load PDF');
