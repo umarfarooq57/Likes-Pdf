@@ -18,7 +18,6 @@ celery_app = Celery(
         "app.workers.optimization_tasks",
         "app.workers.security_tasks",
         "app.workers.scanner_tasks",
-        "app.workers.ai_tasks",
         "app.workers.cleanup_tasks",
     ],
 )
@@ -47,7 +46,6 @@ celery_app.conf.task_routes = {
     "app.workers.optimization_tasks.*": {"queue": "optimization"},
     "app.workers.security_tasks.*": {"queue": "security"},
     "app.workers.scanner_tasks.*": {"queue": "scanner"},
-    "app.workers.ai_tasks.*": {"queue": "ai"},
     "app.workers.cleanup_tasks.*": {"queue": "cleanup"},
 }
 

@@ -156,7 +156,7 @@ export default function ToolLayout({
                         <div className="hidden md:flex items-center space-x-6">
                             <Link href="/tools" className="text-gray-600 hover:text-gray-900">All Tools</Link>
                             <Link href="/login" className="text-gray-600 hover:text-gray-900">Login</Link>
-                            <Link href="/register" className="btn-primary">Get Started</Link>
+                            <Link href="/tools" className="btn-primary">Open Tools</Link>
                         </div>
                     </div>
                 </div>
@@ -334,14 +334,32 @@ export default function ToolLayout({
                                 Your file is ready for download
                             </p>
                             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                                <a
-                                    href={result.downloadUrl}
-                                    download={result.filename}
+                                <button
+                                    onClick={async () => {
+                                        try {
+                                            const { blob, filename } = await (window as any).documentsApi
+                                                ? await (window as any).documentsApi.downloadBlobUrl(result.downloadUrl)
+                                                : await (await import('@/lib/api')).documentsApi.downloadBlobUrl(result.downloadUrl);
+                                            const url = URL.createObjectURL(blob);
+                                            const a = document.createElement('a');
+                                            a.href = url;
+                                            a.download = filename || result.filename;
+                                            document.body.appendChild(a);
+                                            a.click();
+                                            a.remove();
+                                            URL.revokeObjectURL(url);
+                                        } catch (err: any) {
+                                            // eslint-disable-next-line no-console
+                                            console.error('Download failed', err);
+                                            // fallback: open URL in new tab
+                                            window.open(result.downloadUrl, '_blank');
+                                        }
+                                    }}
                                     className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white font-semibold rounded-xl hover:bg-green-700 transition-colors"
                                 >
                                     <Download className="w-5 h-5" />
                                     Download {result.filename}
-                                </a>
+                                </button>
                                 <button
                                     onClick={clearAll}
                                     className="inline-flex items-center justify-center gap-2 px-6 py-3 border border-gray-200 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 transition-colors"

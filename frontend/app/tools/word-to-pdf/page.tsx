@@ -167,14 +167,28 @@ export default function WordToPDFPage() {
 
                             {resultUrl && (
                                 <div className="mt-6 flex gap-4">
-                                    <a
-                                        href={resultUrl}
-                                        download
+                                    <button
+                                        onClick={async () => {
+                                            try {
+                                                const api = await import('@/lib/api');
+                                                const { blob, filename } = await api.documentsApi.downloadBlobUrl(resultUrl!);
+                                                const url = URL.createObjectURL(blob);
+                                                const a = document.createElement('a');
+                                                a.href = url;
+                                                a.download = filename || 'result.pdf';
+                                                document.body.appendChild(a);
+                                                a.click();
+                                                a.remove();
+                                                URL.revokeObjectURL(url);
+                                            } catch (err) {
+                                                window.open(resultUrl, '_blank');
+                                            }
+                                        }}
                                         className="flex-1 btn-primary flex items-center justify-center gap-2"
                                     >
                                         <Download className="w-5 h-5" />
                                         Download PDF
-                                    </a>
+                                    </button>
                                     <button
                                         onClick={resetTool}
                                         className="btn-secondary"

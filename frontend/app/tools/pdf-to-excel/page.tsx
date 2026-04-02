@@ -4,6 +4,8 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { FileText, ArrowLeft, Loader2, FileSpreadsheet, Download, Table } from 'lucide-react';
 import FileDropzone from '@/components/FileDropzone';
+import ProgressTracker from '@/components/ProgressTracker';
+import DownloadButton from '@/components/DownloadButton';
 import toast from 'react-hot-toast';
 import { documentsApi, conversionsApi } from '@/lib/api';
 
@@ -11,6 +13,7 @@ export default function PDFToExcelPage() {
     const [documentId, setDocumentId] = useState<string | null>(null);
     const [fileName, setFileName] = useState<string>('');
     const [isProcessing, setIsProcessing] = useState(false);
+    const [conversionId, setConversionId] = useState<string | null>(null);
     const [resultUrl, setResultUrl] = useState<string | null>(null);
     const [extractTables, setExtractTables] = useState(true);
     const [preserveFormatting, setPreserveFormatting] = useState(true);
@@ -38,20 +41,29 @@ export default function PDFToExcelPage() {
         setIsProcessing(true);
 
         try {
-            // In real implementation, would call pdf-to-excel API
-            await new Promise(resolve => setTimeout(resolve, 2500));
-            setResultUrl(`http://localhost:8000/api/v1/convert/${documentId}/download`);
-            toast.success('Converted to Excel successfully!');
+            const result = await conversionsApi.pdfToExcel(documentId);
+            setConversionId(String(result.id));
         } catch (error) {
             toast.error('Failed to convert');
-        } finally {
             setIsProcessing(false);
         }
+    };
+
+    const handleComplete = (url: string) => {
+        setResultUrl(url);
+        setIsProcessing(false);
+        toast.success('Converted to Excel successfully!');
+    };
+
+    const handleError = (error: string) => {
+        setIsProcessing(false);
+        toast.error(error);
     };
 
     const resetTool = () => {
         setDocumentId(null);
         setFileName('');
+        setConversionId(null);
         setResultUrl(null);
     };
 
@@ -151,21 +163,28 @@ export default function PDFToExcelPage() {
                                     </label>
                                 </div>
 
-                                {/* Convert Button */}
-                                <button
-                                    onClick={handleConvert}
-                                    disabled={isProcessing}
-                                    className="w-full py-4 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all disabled:opacity-50"
-                                >
-                                    {isProcessing ? (
-                                        <span className="flex items-center justify-center gap-2">
-                                            <Loader2 className="w-5 h-5 animate-spin" />
-                                            Converting to Excel...
-                                        </span>
-                                    ) : (
-                                        'Convert to Excel'
-                                    )}
-                                </button>
+                                {conversionId ? (
+                                    <ProgressTracker
+                                        conversionId={conversionId}
+                                        onComplete={handleComplete}
+                                        onError={handleError}
+                                    />
+                                ) : (
+                                    <button
+                                        onClick={handleConvert}
+                                        disabled={isProcessing}
+                                        className="w-full py-4 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all disabled:opacity-50"
+                                    >
+                                        {isProcessing ? (
+                                            <span className="flex items-center justify-center gap-2">
+                                                <Loader2 className="w-5 h-5 animate-spin" />
+                                                Converting to Excel...
+                                            </span>
+                                        ) : (
+                                            'Convert to Excel'
+                                        )}
+                                    </button>
+                                )}
                             </div>
                         )}
                     </div>
@@ -178,14 +197,14 @@ export default function PDFToExcelPage() {
                         <h3 className="text-xl font-semibold text-gray-900 mb-2">Conversion Complete!</h3>
                         <p className="text-gray-600 mb-6">Your Excel file is ready for download.</p>
                         <div className="flex gap-4 justify-center">
-                            <a
-                                href={resultUrl}
-                                download={fileName.replace('.pdf', '.xlsx')}
+                            <DownloadButton
+                                url={resultUrl}
+                                fallbackName={fileName.replace(/\.[^.]+$/, '.xlsx')}
                                 className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all"
                             >
                                 <Download className="w-5 h-5" />
                                 Download Excel
-                            </a>
+                            </DownloadButton>
                             <button
                                 onClick={resetTool}
                                 className="px-6 py-3 border border-gray-200 rounded-xl font-semibold hover:bg-gray-50 transition-all"

@@ -7,6 +7,7 @@ import FileDropzone from '@/components/FileDropzone';
 import ProgressTracker from '@/components/ProgressTracker';
 import toast from 'react-hot-toast';
 import { documentsApi, editingApi, conversionsApi } from '@/lib/api';
+import DownloadButton from '@/components/DownloadButton';
 
 export default function SplitPDFPage() {
     const [documentId, setDocumentId] = useState<string | null>(null);
@@ -254,23 +255,17 @@ export default function SplitPDFPage() {
                             />
 
                             {resultUrl && (
-                                <div className="mt-6 flex gap-4">
-                                    <a
-                                        href={resultUrl}
-                                        download
-                                        className="flex-1 btn-primary flex items-center justify-center gap-2"
-                                    >
-                                        <Download className="w-5 h-5" />
-                                        Download Split PDFs
-                                    </a>
-                                    <button
-                                        onClick={resetTool}
-                                        className="btn-secondary"
-                                    >
-                                        Split Another
-                                    </button>
-                                </div>
+                                <DownloadButton url={resultUrl} fallbackName="split_results.zip" className="flex-1 btn-primary flex items-center justify-center gap-2">
+                                    <Download className="w-5 h-5" />
+                                    Download Split PDFs
+                                </DownloadButton>
                             )}
+                            <button
+                                onClick={resetTool}
+                                className="btn-secondary"
+                            >
+                                Split Another
+                            </button>
                         </>
                     )}
                 </div>

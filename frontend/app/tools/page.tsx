@@ -4,7 +4,6 @@ import {
     Merge,
     Split,
     RotateCw,
-    Minimize2,
     FileImage,
     FileCode,
     Trash2,
@@ -13,10 +12,6 @@ import {
     FileSpreadsheet,
     Presentation,
     ArrowLeft,
-    Lock,
-    Unlock,
-    Droplets,
-    Hash,
     Info,
     Scan,
     Brain,
@@ -32,12 +27,9 @@ import {
     PenTool,
     Crop,
     Wrench,
-    GitCompare,
     AlignLeft,
     EyeOff,
-    Bookmark,
     Layers,
-    FolderOpen,
 } from 'lucide-react';
 
 const tools = [
@@ -70,7 +62,6 @@ const tools = [
             { name: 'PDF to CSV', description: 'Extract tables to CSV', icon: FileCode, href: '/tools/pdf-to-csv', color: 'from-gray-500 to-gray-600' },
             { name: 'PDF to XML', description: 'Convert to XML format', icon: FileCode, href: '/tools/pdf-to-xml', color: 'from-slate-500 to-slate-600' },
             { name: 'PDF to JSON', description: 'Convert to JSON data', icon: FileCode, href: '/tools/pdf-to-json', color: 'from-zinc-500 to-zinc-600' },
-            { name: 'Batch Convert', description: 'Convert multiple files', icon: FolderOpen, href: '/tools/batch', color: 'from-violet-500 to-violet-600' },
         ],
     },
     // Data & Reporting
@@ -79,30 +70,6 @@ const tools = [
         items: [
             { name: 'CSV to PDF', description: 'Generate PDF from CSV', icon: FileSpreadsheet, href: '/tools/csv-to-pdf', color: 'from-emerald-500 to-emerald-600' },
             { name: 'JSON to PDF', description: 'Generate PDF from JSON', icon: FileCode, href: '/tools/json-to-pdf', color: 'from-blue-500 to-blue-600' },
-        ],
-    },
-    // Security & Signing
-    {
-        category: 'Security & Signing',
-        items: [
-            { name: 'Protect PDF', description: 'Add password protection', icon: Lock, href: '/tools/protect', color: 'from-red-500 to-red-600' },
-            { name: 'Unlock PDF', description: 'Remove password', icon: Unlock, href: '/tools/unlock', color: 'from-green-500 to-green-600' },
-            { name: 'Add Watermark', description: 'Add text or image watermark', icon: Droplets, href: '/tools/watermark', color: 'from-blue-500 to-blue-600' },
-            { name: 'E-Sign PDF', description: 'Add your signature', icon: PenTool, href: '/tools/sign', color: 'from-indigo-500 to-indigo-600' },
-            { name: 'Redact PDF', description: 'Permanently remove content', icon: EyeOff, href: '/tools/redact', color: 'from-rose-500 to-rose-600' },
-            { name: 'Page Numbers', description: 'Add page numbering', icon: Hash, href: '/tools/page-numbers', color: 'from-purple-500 to-purple-600' },
-            { name: 'Edit Metadata', description: 'Edit document properties', icon: Info, href: '/tools/metadata', color: 'from-gray-500 to-gray-600' },
-        ],
-    },
-    // Optimization & Repair
-    {
-        category: 'Optimization & Repair',
-        items: [
-            { name: 'Compress PDF', description: 'Reduce file size', icon: Minimize2, href: '/tools/compress', color: 'from-orange-500 to-orange-600' },
-            { name: 'Repair PDF', description: 'Fix corrupted files', icon: Wrench, href: '/tools/repair', color: 'from-yellow-500 to-yellow-600' },
-            { name: 'Flatten PDF', description: 'Flatten forms & layers', icon: Layers, href: '/tools/flatten', color: 'from-indigo-500 to-indigo-600' },
-            { name: 'Add Bookmarks', description: 'Create table of contents', icon: Bookmark, href: '/tools/bookmarks', color: 'from-amber-500 to-amber-600' },
-            { name: 'Compare PDFs', description: 'Find differences', icon: GitCompare, href: '/tools/compare', color: 'from-cyan-500 to-cyan-600' },
         ],
     },
 ];
@@ -122,11 +89,8 @@ export default function ToolsPage() {
                         </Link>
 
                         <div className="hidden md:flex items-center space-x-8">
-                            <Link href="/login" className="text-gray-600 hover:text-gray-900 transition-colors">
-                                Login
-                            </Link>
-                            <Link href="/register" className="btn-primary">
-                                Get Started
+                            <Link href="/tools" className="btn-primary">
+                                Open Tools
                             </Link>
                         </div>
                     </div>

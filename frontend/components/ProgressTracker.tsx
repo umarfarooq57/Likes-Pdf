@@ -4,7 +4,10 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+const RAW_API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_V1_BASE_URL = RAW_API_BASE_URL.replace(/\/+$/, '').endsWith('/api/v1')
+    ? RAW_API_BASE_URL.replace(/\/+$/, '')
+    : `${RAW_API_BASE_URL.replace(/\/+$/, '')}/api/v1`;
 
 interface ProgressTrackerProps {
     conversionId: string;
@@ -34,7 +37,7 @@ export default function ProgressTracker({
 
         const pollStatus = async () => {
             try {
-                const response = await fetch(`${API_BASE_URL}/convert/${conversionId}/status`);
+                const response = await fetch(`${API_V1_BASE_URL}/convert/${conversionId}/status`);
                 const data: ConversionStatus = await response.json();
                 setStatus(data);
 
@@ -133,15 +136,30 @@ export default function ProgressTracker({
 
             {/* Download Button */}
             {status.status === 'completed' && status.result_url && (
-                <motion.a
+                <motion.button
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    href={status.result_url}
-                    download
+                    onClick={async () => {
+                        try {
+                            const api = await import('@/lib/api');
+                            const { blob, filename } = await api.documentsApi.downloadBlobUrl(status.result_url!);
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = filename || 'result';
+                            document.body.appendChild(a);
+                            a.click();
+                            a.remove();
+                            URL.revokeObjectURL(url);
+                        } catch (err: any) {
+                            console.error('Download failed', err);
+                            window.open(status.result_url, '_blank');
+                        }
+                    }}
                     className="block w-full mt-6 btn-primary text-center"
                 >
                     Download Result
-                </motion.a>
+                </motion.button>
             )}
         </div>
     );

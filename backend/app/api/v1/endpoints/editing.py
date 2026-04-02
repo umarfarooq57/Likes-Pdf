@@ -27,24 +27,47 @@ from app.schemas.conversion import (
     ExtractPagesRequest,
 )
 
-# Import PDF Engine
+# Import PDF Engine and accurately detect availability of PyMuPDF
 try:
-    from app.engines.pdf_engine import PDFEngine
-    PDF_ENGINE_AVAILABLE = True
-except ImportError:
+    import importlib
+    pdf_module = importlib.import_module('app.engines.pdf_engine')
+    PDFEngine = getattr(pdf_module, 'PDFEngine', None)
+    # pdf_module exposes PYMUPDF_AVAILABLE or PYPDF_AVAILABLE flags
+    PYMUPDF_AVAILABLE = bool(getattr(pdf_module, 'PYMUPDF_AVAILABLE', False))
+    PYPDF_AVAILABLE = bool(getattr(pdf_module, 'PYPDF_AVAILABLE', False))
+    PDF_ENGINE_AVAILABLE = PYMUPDF_AVAILABLE or PYPDF_AVAILABLE
+except Exception:
     PDFEngine = None
+    PYMUPDF_AVAILABLE = False
+    PYPDF_AVAILABLE = False
     PDF_ENGINE_AVAILABLE = False
 
 
 router = APIRouter()
 
 
-def ensure_pdf_engine():
-    """Check if PDF engine is available"""
+def ensure_any_pdf_engine():
+    """Ensure at least one PDF engine (pymupdf or pypdf) is available"""
     if not PDF_ENGINE_AVAILABLE:
         raise HTTPException(
             status_code=500,
-            detail="PDF engine not available. Please install pymupdf."
+            detail=(
+                "PDF engine not available. Install one of the following:\n"
+                "- PyMuPDF (recommended, full feature set): pip install pymupdf\n"
+                "- pypdf (fallback for merge/split): pip install pypdf"
+            )
+        )
+
+
+def ensure_pymupdf():
+    """Ensure PyMuPDF is available for advanced editing features"""
+    if not PYMUPDF_AVAILABLE:
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                "PyMuPDF not available. Advanced PDF editing (rotate, reorder, extract, compress) "
+                "requires PyMuPDF. Install via: pip install pymupdf"
+            )
         )
 
 
@@ -55,7 +78,7 @@ async def merge_pdfs(
     db: AsyncSession = Depends(get_db)
 ):
     """Merge multiple PDFs into one"""
-    ensure_pdf_engine()
+    ensure_any_pdf_engine()
 
     doc_service = DocumentService(db)
     conv_service = ConversionService(db)
@@ -85,8 +108,9 @@ async def merge_pdfs(
             detail=f"At least 2 valid PDF documents required. Found {len(input_paths)} documents."
         )
 
-    print(f"[MERGE] Creating conversion, first_doc_id type: {type(first_doc_id)}, value: {first_doc_id}")
-    
+    print(
+        f"[MERGE] Creating conversion, first_doc_id type: {type(first_doc_id)}, value: {first_doc_id}")
+
     # Create conversion record - ensure first_doc_id is string
     conversion = await conv_service.create_conversion(
         document_id=str(first_doc_id) if first_doc_id else None,
@@ -123,7 +147,7 @@ async def split_pdf(
     db: AsyncSession = Depends(get_db)
 ):
     """Split PDF into multiple files"""
-    ensure_pdf_engine()
+    ensure_any_pdf_engine()
 
     doc_service = DocumentService(db)
     conv_service = ConversionService(db)
@@ -146,7 +170,7 @@ async def split_pdf(
     try:
         # Build page_ranges for PDFEngine
         page_ranges = None
-        
+
         if request.pages:
             # Convert individual pages to single-page ranges (1-indexed)
             page_ranges = [(p, p) for p in request.pages]
@@ -160,7 +184,8 @@ async def split_pdf(
                 elif len(parts) == 1:
                     page_ranges.append((int(parts[0]), int(parts[0])))
 
-        result_files = PDFEngine.split_pdf(input_path, output_dir, page_ranges=page_ranges)
+        result_files = PDFEngine.split_pdf(
+            input_path, output_dir, page_ranges=page_ranges)
 
         # For split, we return the directory path
         await conv_service.mark_completed(conversion.id, str(output_dir), "split_results.zip")
@@ -181,7 +206,7 @@ async def rotate_pages(
     db: AsyncSession = Depends(get_db)
 ):
     """Rotate specific pages in PDF"""
-    ensure_pdf_engine()
+    ensure_pymupdf()
 
     doc_service = DocumentService(db)
     conv_service = ConversionService(db)
@@ -228,7 +253,7 @@ async def reorder_pages(
     db: AsyncSession = Depends(get_db)
 ):
     """Reorder pages in PDF"""
-    ensure_pdf_engine()
+    ensure_pymupdf()
 
     doc_service = DocumentService(db)
     conv_service = ConversionService(db)
@@ -268,7 +293,7 @@ async def delete_pages(
     db: AsyncSession = Depends(get_db)
 ):
     """Delete specific pages from PDF"""
-    ensure_pdf_engine()
+    ensure_pymupdf()
 
     doc_service = DocumentService(db)
     conv_service = ConversionService(db)
@@ -308,7 +333,7 @@ async def extract_pages(
     db: AsyncSession = Depends(get_db)
 ):
     """Extract specific pages from PDF"""
-    ensure_pdf_engine()
+    ensure_pymupdf()
 
     doc_service = DocumentService(db)
     conv_service = ConversionService(db)

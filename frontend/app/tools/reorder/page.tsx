@@ -6,6 +6,7 @@ import { FileText, ArrowLeft, Loader2, GripVertical, Download, ArrowUp, ArrowDow
 import FileDropzone from '@/components/FileDropzone';
 import toast from 'react-hot-toast';
 import { documentsApi, editingApi, securityApi } from '@/lib/api';
+import DownloadButton from '@/components/DownloadButton';
 
 interface PageItem {
     pageNumber: number;
@@ -37,7 +38,9 @@ export default function ReorderPage() {
                 const thumbnails = await securityApi.getThumbnails(result.id, 'all', 150);
                 const pageItems: PageItem[] = thumbnails.thumbnails.map((thumb: string, index: number) => ({
                     pageNumber: index + 1,
-                    thumbnail: `data:image/png;base64,${thumb}`,
+                    thumbnail: thumb?.startsWith('/') || thumb?.startsWith('http')
+                        ? thumb
+                        : `data:image/png;base64,${thumb}`,
                 }));
                 setPages(pageItems);
             } catch {
@@ -272,14 +275,10 @@ export default function ReorderPage() {
                         <h3 className="text-xl font-semibold text-gray-900 mb-2">Pages Reordered!</h3>
                         <p className="text-gray-600 mb-6">Your PDF with the new page order is ready.</p>
                         <div className="flex gap-4 justify-center">
-                            <a
-                                href={resultUrl}
-                                download
-                                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-500 to-blue-500 text-white rounded-xl font-semibold hover:shadow-lg transition-all"
-                            >
+                            <DownloadButton url={resultUrl!} fallbackName="reordered.pdf" className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-500 to-blue-500 text-white rounded-xl font-semibold hover:shadow-lg transition-all">
                                 <Download className="w-5 h-5" />
                                 Download PDF
-                            </a>
+                            </DownloadButton>
                             <button
                                 onClick={resetTool}
                                 className="px-6 py-3 border border-gray-200 rounded-xl font-semibold hover:bg-gray-50 transition-all"

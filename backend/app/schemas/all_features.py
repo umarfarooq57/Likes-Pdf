@@ -153,11 +153,6 @@ class RepairRequest(BaseModel):
     document_id: UUID
 
 
-class FlattenRequest(BaseModel):
-    """Flatten annotations"""
-    document_id: UUID
-
-
 class BatchRenameRequest(BaseModel):
     """Batch rename PDFs"""
     document_ids: List[UUID]
@@ -251,33 +246,6 @@ class OptimizeImagesRequest(BaseModel):
     max_dimension: Optional[int] = None
 
 
-# ============== OCR Schemas ==============
-
-class OCRRequest(BaseModel):
-    """OCR processing request"""
-    document_id: UUID
-    language: str = "eng"
-    pages: Optional[List[int]] = None
-    create_searchable_pdf: bool = False
-    output_format: str = "text"  # text, json, hocr
-
-
-class OCRResponse(BaseModel):
-    """OCR result"""
-    success: bool
-    text: str
-    confidence: float
-    pages_processed: int
-    language: str
-    download_url: Optional[str] = None
-
-
-class SearchablePDFRequest(BaseModel):
-    """Create searchable PDF from scanned document"""
-    document_id: UUID
-    language: str = "eng"
-
-
 # ============== Edit & Annotate Schemas ==============
 
 class AddTextRequest(BaseModel):
@@ -328,22 +296,7 @@ class AddShapeRequest(BaseModel):
     stroke_width: float = 1.0
 
 
-class RedactRequest(BaseModel):
-    """Redact content"""
-    document_id: UUID
-    page: int
-    rect: List[float]  # [x1, y1, x2, y2]
-    fill_color: str = "#000000"
-
-
-class EditMetadataRequest(BaseModel):
-    """Edit PDF metadata"""
-    document_id: UUID
-    title: Optional[str] = None
-    author: Optional[str] = None
-    subject: Optional[str] = None
-    keywords: Optional[str] = None
-    creator: Optional[str] = None
+# Redact and metadata editing schemas removed
 
 
 class ComparePDFsRequest(BaseModel):
@@ -431,16 +384,7 @@ class SecurityCheckResponse(BaseModel):
     encryption_method: Optional[str] = None
 
 
-class DigitalSignRequest(BaseModel):
-    """Add digital signature"""
-    document_id: UUID
-    certificate_data: Optional[str] = None  # Base64 PFX
-    certificate_password: Optional[str] = None
-    signature_image_id: Optional[UUID] = None
-    page: int = 1
-    position: List[float] = [400, 100, 550, 150]
-    reason: Optional[str] = None
-    location: Optional[str] = None
+# Digital signature schema removed
 
 
 # ============== Forms Schemas ==============
@@ -471,109 +415,6 @@ class CreateFormFieldRequest(BaseModel):
     rect: List[float]  # [x1, y1, x2, y2]
     default_value: Optional[str] = None
     options: Optional[List[str]] = None  # For dropdown/radio
-
-
-# ============== AI Features Schemas ==============
-
-class SummarizeRequest(BaseModel):
-    """AI summarization request"""
-    document_id: UUID
-    length: str = Field(default="medium", pattern="^(short|medium|long)$")
-    style: str = Field(
-        default="bullet", pattern="^(bullet|paragraph|executive)$")
-
-
-class SummarizeResponse(BaseModel):
-    """Summarization result"""
-    summary: str
-    length: str
-    style: str
-    word_count: int
-    tokens_used: int
-
-
-class ExtractTablesRequest(BaseModel):
-    """AI table extraction"""
-    document_id: UUID
-    pages: Optional[List[int]] = None
-    output_format: str = "json"  # json, csv, excel
-
-
-class ExtractTablesResponse(BaseModel):
-    """Table extraction result"""
-    tables: List[Dict[str, Any]]
-    table_count: int
-    download_url: Optional[str] = None
-
-
-class TranslateRequest(BaseModel):
-    """Document translation"""
-    document_id: UUID
-    source_language: str = "auto"
-    target_language: str
-    preserve_formatting: bool = True
-
-
-class TranslateResponse(BaseModel):
-    """Translation result"""
-    translated_text: str
-    source_language: str
-    target_language: str
-    download_url: Optional[str] = None
-
-
-class TextToSpeechRequest(BaseModel):
-    """Convert document to audio"""
-    document_id: UUID
-    voice: str = "alloy"  # OpenAI voices
-    speed: float = 1.0
-    pages: Optional[List[int]] = None
-
-
-class TextToSpeechResponse(BaseModel):
-    """TTS result"""
-    audio_url: str
-    duration_seconds: float
-    format: str
-
-
-class ClassifyRequest(BaseModel):
-    """Document classification"""
-    document_id: UUID
-
-
-class ClassifyResponse(BaseModel):
-    """Classification result"""
-    category: str
-    confidence: float
-    sub_categories: List[str]
-    tags: List[str]
-
-
-class ExtractEntitiesRequest(BaseModel):
-    """Named entity extraction"""
-    document_id: UUID
-
-
-class ExtractEntitiesResponse(BaseModel):
-    """Entity extraction result"""
-    entities: Dict[str, List[str]]  # {entity_type: [values]}
-    entity_count: int
-
-
-class ChatRequest(BaseModel):
-    """Chat with document"""
-    document_id: UUID
-    question: str
-    conversation_id: Optional[str] = None
-
-
-class ChatResponse(BaseModel):
-    """Chat response"""
-    answer: str
-    conversation_id: str
-    referenced_pages: List[int]
-    tokens_used: int
 
 
 # ============== Cloud Integration Schemas ==============

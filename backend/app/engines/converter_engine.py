@@ -50,6 +50,13 @@ except ImportError:
     OPENPYXL_AVAILABLE = False
 
 try:
+    import xlrd
+    XLRD_AVAILABLE = True
+except ImportError:
+    xlrd = None
+    XLRD_AVAILABLE = False
+
+try:
     from pptx import Presentation
     from pptx.util import Inches as PptxInches, Pt as PptxPt
     PPTX_AVAILABLE = True
@@ -482,28 +489,26 @@ class ConverterEngine:
         output_path: Path
     ) -> Path:
         """Convert Excel to PDF"""
-        if not OPENPYXL_AVAILABLE or not REPORTLAB_AVAILABLE:
+        if not REPORTLAB_AVAILABLE:
             raise RuntimeError(
-                "openpyxl and reportlab required for Excel to PDF conversion")
+                "reportlab required for Excel to PDF conversion")
 
         output_path.parent.mkdir(parents=True, exist_ok=True)
-
-        wb = load_workbook(str(xlsx_path))
 
         c = canvas.Canvas(str(output_path), pagesize=A4)
         width, height = A4
 
-        for sheet in wb.sheetnames:
-            ws = wb[sheet]
+        file_ext = xlsx_path.suffix.lower()
 
+        def draw_rows(sheet_name: str, rows):
             y = height - 50
             c.setFont("Helvetica-Bold", 14)
-            c.drawString(50, y, f"Sheet: {sheet}")
+            c.drawString(50, y, f"Sheet: {sheet_name}")
             y -= 30
 
             c.setFont("Helvetica", 10)
 
-            for row in ws.iter_rows(values_only=True):
+            for row in rows:
                 if y < 50:
                     c.showPage()
                     y = height - 50
@@ -511,8 +516,8 @@ class ConverterEngine:
 
                 x = 50
                 for cell in row:
-                    value = str(cell) if cell is not None else ""
-                    c.drawString(x, y, value[:30])  # Truncate long values
+                    value = "" if cell is None else str(cell)
+                    c.drawString(x, y, value[:30])
                     x += 80
                     if x > width - 50:
                         break
@@ -521,8 +526,92 @@ class ConverterEngine:
 
             c.showPage()
 
-        c.save()
-        return output_path
+        # .xlsx/.xlsm path via openpyxl
+        if file_ext in {".xlsx", ".xlsm"}:
+            # True .xlsx files are zip containers; if not, try legacy fallback.
+            if OPENPYXL_AVAILABLE and zipfile.is_zipfile(str(xlsx_path)):
+                try:
+                    wb = load_workbook(
+                        str(xlsx_path), data_only=True, read_only=True)
+                    for sheet in wb.sheetnames:
+                        ws = wb[sheet]
+                        draw_rows(sheet, ws.iter_rows(values_only=True))
+                    c.save()
+                    return output_path
+                except Exception:
+                    pass
+
+            # Fallback: some files are old .xls content with .xlsx extension.
+            xlrd_error = None
+            if XLRD_AVAILABLE:
+                try:
+                    book = xlrd.open_workbook(str(xlsx_path))
+                    for sheet in book.sheets():
+                        rows = []
+                        for r in range(sheet.nrows):
+                            rows.append(sheet.row_values(r))
+                        draw_rows(sheet.name, rows)
+                    c.save()
+                    return output_path
+                except Exception as e:
+                    xlrd_error = str(e)
+
+            # Last-resort fallback: treat file as delimited text (e.g., CSV renamed as .xlsx).
+            try:
+                raw = xlsx_path.read_bytes()
+                decoded = None
+                for enc in ("utf-8", "utf-8-sig", "latin-1"):
+                    try:
+                        decoded = raw.decode(enc)
+                        break
+                    except Exception:
+                        continue
+
+                if decoded is not None:
+                    lines = [ln for ln in decoded.splitlines() if ln.strip()]
+                    if lines:
+                        candidates = [",", "\t", ";", "|"]
+                        delimiter = max(candidates, key=lambda d: sum(
+                            ln.count(d) for ln in lines[:20]))
+                        parsed_rows = [ln.split(delimiter) for ln in lines]
+                        draw_rows("Recovered Data", parsed_rows)
+                        c.save()
+                        return output_path
+            except Exception:
+                pass
+
+            if xlrd_error:
+                raise RuntimeError(
+                    "Failed to read Excel workbook. The file appears corrupted or unsupported. "
+                    f"Details: {xlrd_error}"
+                )
+
+            raise RuntimeError(
+                "openpyxl and xlrd are required for robust .xlsx conversion")
+
+        # Legacy .xls path via xlrd
+        if file_ext == ".xls":
+            if not XLRD_AVAILABLE:
+                raise RuntimeError("xlrd is required for .xls conversion")
+
+            try:
+                book = xlrd.open_workbook(str(xlsx_path))
+                for sheet in book.sheets():
+                    rows = []
+                    for r in range(sheet.nrows):
+                        rows.append(sheet.row_values(r))
+                    draw_rows(sheet.name, rows)
+            except Exception as e:
+                raise RuntimeError(
+                    "Failed to convert .xls file. Ensure xlrd is installed and workbook is valid. "
+                    f"Details: {str(e)}"
+                )
+
+            c.save()
+            return output_path
+
+        raise RuntimeError(
+            "Unsupported Excel format. Please use .xlsx, .xlsm, or .xls")
 
     # ==================== PDF to PowerPoint ====================
 
@@ -654,17 +743,17 @@ class ConverterEngine:
         """Convert PDF to plain text"""
         if not PYMUPDF_AVAILABLE:
             raise RuntimeError("PyMuPDF required for PDF to text conversion")
-        
+
         output_path.parent.mkdir(parents=True, exist_ok=True)
         doc = fitz.open(str(pdf_path))
         text_parts = []
         for page in doc:
             text_parts.append(page.get_text())
         doc.close()
-        
+
         with open(output_path, "w", encoding="utf-8") as f:
             f.write("\n\n".join(text_parts))
-        
+
         return output_path
 
     # ==================== PDF to HTML ====================
@@ -1089,22 +1178,22 @@ class ConverterEngine:
         """Extract tables from PDF to CSV"""
         if not PYMUPDF_AVAILABLE:
             raise RuntimeError("PyMuPDF required for PDF to CSV conversion")
-            
+
         doc = fitz.open(str(pdf_path))
         all_data = []
-        
+
         for page in doc:
             tabs = page.find_tables()
             for tab in tabs:
                 all_data.extend(tab.extract())
-        
+
         doc.close()
-        
+
         output_path.parent.mkdir(parents=True, exist_ok=True)
         with open(output_path, "w", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
             writer.writerows(all_data)
-            
+
         return output_path
 
     # ==================== PDF to XML ====================
@@ -1114,13 +1203,13 @@ class ConverterEngine:
         """Convert PDF structure to XML"""
         if not PYMUPDF_AVAILABLE:
             raise RuntimeError("PyMuPDF required for PDF to XML conversion")
-            
+
         doc = fitz.open(str(pdf_path))
-        
+
         # Simple XML construction
         xml_content = ['<?xml version="1.0" encoding="UTF-8"?>']
         xml_content.append('<document name="{}">'.format(pdf_path.name))
-        
+
         for i, page in enumerate(doc):
             xml_content.append('  <page number="{}">'.format(i+1))
             blocks = page.get_text("dict")["blocks"]
@@ -1129,18 +1218,20 @@ class ConverterEngine:
                     xml_content.append('    <block type="text">')
                     for l in b["lines"]:
                         for s in l["spans"]:
-                            text = s["text"].replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-                            xml_content.append('      <span>{}</span>'.format(text))
+                            text = s["text"].replace("&", "&amp;").replace(
+                                "<", "&lt;").replace(">", "&gt;")
+                            xml_content.append(
+                                '      <span>{}</span>'.format(text))
                     xml_content.append('    </block>')
             xml_content.append('  </page>')
-            
+
         xml_content.append('</document>')
         doc.close()
-        
+
         output_path.parent.mkdir(parents=True, exist_ok=True)
         with open(output_path, "w", encoding="utf-8") as f:
             f.write("\n".join(xml_content))
-            
+
         return output_path
 
     # ==================== PDF to JSON ====================
@@ -1150,14 +1241,14 @@ class ConverterEngine:
         """Convert PDF structure to JSON"""
         if not PYMUPDF_AVAILABLE:
             raise RuntimeError("PyMuPDF required for PDF to JSON conversion")
-            
+
         doc = fitz.open(str(pdf_path))
         data = {
             "filename": pdf_path.name,
             "page_count": len(doc),
             "pages": []
         }
-        
+
         for i, page in enumerate(doc):
             page_data = {
                 "number": i + 1,
@@ -1166,13 +1257,13 @@ class ConverterEngine:
                 "content": page.get_text("dict")
             }
             data["pages"].append(page_data)
-            
+
         doc.close()
-        
+
         output_path.parent.mkdir(parents=True, exist_ok=True)
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
-            
+
         return output_path
 
     # ==================== CSV to PDF ====================
@@ -1182,22 +1273,22 @@ class ConverterEngine:
         """Convert CSV to PDF report"""
         if not REPORTLAB_AVAILABLE:
             raise RuntimeError("reportlab required for CSV to PDF conversion")
-        
+
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        
+
         doc = SimpleDocTemplate(str(output_path), pagesize=A4)
         elements = []
         styles = getSampleStyleSheet()
-        
+
         data = []
         with open(csv_path, "r", encoding="utf-8") as f:
             reader = csv.reader(f)
             for row in reader:
                 data.append(row)
-        
+
         if data:
             # Adjust column widths based on data
-            col_widths = None # Auto
+            col_widths = None  # Auto
             t = Table(data, hAlign='CENTER')
             t.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
@@ -1212,7 +1303,7 @@ class ConverterEngine:
             elements.append(t)
         else:
             elements.append(Paragraph("Empty CSV file", styles['Normal']))
-            
+
         doc.build(elements)
         return output_path
 
@@ -1223,26 +1314,28 @@ class ConverterEngine:
         """Convert JSON to PDF report"""
         if not REPORTLAB_AVAILABLE:
             raise RuntimeError("reportlab required for JSON to PDF conversion")
-        
+
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        
+
         doc = SimpleDocTemplate(str(output_path), pagesize=A4)
         elements = []
         styles = getSampleStyleSheet()
-        
+
         with open(json_path, "r", encoding="utf-8") as f:
             data = json.load(f)
-        
+
         elements.append(Paragraph("JSON Document Export", styles['Title']))
-        elements.append(Paragraph(f"Generated at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", styles['Normal']))
+        elements.append(Paragraph(
+            f"Generated at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", styles['Normal']))
         elements.append(Spacer(1, 12))
-        
+
         # Format JSON with indentation
         json_str = json.dumps(data, indent=4)
-        
+
         # Use Preformatted for code-like layout
-        elements.append(Preformatted(json_str, styles['BodyText'], maxLineLength=80))
-        
+        elements.append(Preformatted(
+            json_str, styles['BodyText'], maxLineLength=80))
+
         doc.build(elements)
         return output_path
 

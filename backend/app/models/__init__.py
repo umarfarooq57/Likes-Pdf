@@ -21,11 +21,6 @@ from app.models.subscription import Plan, Subscription, Invoice, UsageRecord, Pl
 # Scanner models
 from app.models.scanner import ScanSession, ScanPage, ScanTemplate, ScanStatus, ScanMode
 
-# AI Feature models
-from app.models.ai_features import (
-    AITask, ChatConversation, ChatMessage, DocumentAnalysis, OCRResult,
-    AITaskType, AITaskStatus, DocumentClassification
-)
 
 # Security models
 from app.models.security import (
@@ -52,9 +47,6 @@ __all__ = [
     "Plan", "Subscription", "Invoice", "UsageRecord", "PlanType", "SubscriptionStatus",
     # Scanner
     "ScanSession", "ScanPage", "ScanTemplate", "ScanStatus", "ScanMode",
-    # AI
-    "AITask", "ChatConversation", "ChatMessage", "DocumentAnalysis", "OCRResult",
-    "AITaskType", "AITaskStatus", "DocumentClassification",
     # Security
     "PDFProtection", "Watermark", "AppliedWatermark", "DigitalSignature",
     "SigningCertificate", "FileEncryption", "WatermarkType", "SignatureStatus",

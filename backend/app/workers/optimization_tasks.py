@@ -38,26 +38,26 @@ def compress_pdf_task(
     """Compress PDF file"""
     if not PYMUPDF_AVAILABLE:
         return {"status": "failed", "error": "PyMuPDF not installed"}
-    
+
     start_time = time.time()
-    
+
     try:
         update_progress(self, 10, "Analyzing document")
-        
+
         input_file = Path(input_path)
         output_file = Path(output_path)
         original_size = input_file.stat().st_size
-        
+
         update_progress(self, 40, "Compressing")
-        
+
         PDFEngine.compress_pdf(input_file, output_file, quality=quality)
-        
+
         update_progress(self, 90, "Finalizing")
-        
+
         compressed_size = output_file.stat().st_size
         reduction = ((original_size - compressed_size) / original_size) * 100
         processing_time = int((time.time() - start_time) * 1000)
-        
+
         return {
             "status": "completed",
             "output_file": str(output_file),
@@ -66,7 +66,7 @@ def compress_pdf_task(
             "reduction_percent": round(reduction, 2),
             "processing_time_ms": processing_time,
         }
-        
+
     except Exception as e:
         logger.error(f"Compress PDF failed: {str(e)}")
         return {
@@ -85,18 +85,18 @@ def linearize_pdf_task(
     """Linearize PDF for web optimization (fast web view)"""
     if not PYMUPDF_AVAILABLE:
         return {"status": "failed", "error": "PyMuPDF not installed"}
-    
+
     start_time = time.time()
-    
+
     try:
         update_progress(self, 10, "Loading document")
-        
+
         input_file = Path(input_path)
         output_file = Path(output_path)
         original_size = input_file.stat().st_size
-        
+
         update_progress(self, 50, "Linearizing for web")
-        
+
         doc = fitz.open(str(input_file))
         doc.save(
             str(output_file),
@@ -105,12 +105,12 @@ def linearize_pdf_task(
             deflate=True,
         )
         doc.close()
-        
+
         update_progress(self, 90, "Finalizing")
-        
+
         final_size = output_file.stat().st_size
         processing_time = int((time.time() - start_time) * 1000)
-        
+
         return {
             "status": "completed",
             "output_file": str(output_file),
@@ -118,7 +118,7 @@ def linearize_pdf_task(
             "final_size": final_size,
             "processing_time_ms": processing_time,
         }
-        
+
     except Exception as e:
         logger.error(f"Linearize PDF failed: {str(e)}")
         return {
@@ -134,59 +134,5 @@ def repair_pdf_task(
     output_path: str,
     conversion_id: Optional[str] = None
 ) -> Dict[str, Any]:
-    """Attempt to repair a corrupt PDF"""
-    if not PYMUPDF_AVAILABLE:
-        return {"status": "failed", "error": "PyMuPDF not installed"}
-    
-    start_time = time.time()
-    
-    try:
-        update_progress(self, 10, "Analyzing document")
-        
-        input_file = Path(input_path)
-        output_file = Path(output_path)
-        
-        update_progress(self, 30, "Attempting repair")
-        
-        doc = fitz.open(str(input_file))
-        issues_found = []
-        pages_recovered = 0
-        
-        for i, page in enumerate(doc):
-            try:
-                _ = page.get_text()
-                pages_recovered += 1
-            except Exception as e:
-                issues_found.append(f"Page {i+1}: {str(e)}")
-        
-        update_progress(self, 70, "Rebuilding document")
-        
-        doc.save(
-            str(output_file),
-            garbage=4,
-            deflate=True,
-            clean=True,
-        )
-        doc.close()
-        
-        update_progress(self, 90, "Finalizing")
-        
-        page_count = PDFEngine.get_page_count(output_file)
-        processing_time = int((time.time() - start_time) * 1000)
-        
-        return {
-            "status": "completed",
-            "output_file": str(output_file),
-            "file_size": output_file.stat().st_size,
-            "page_count": page_count,
-            "pages_recovered": pages_recovered,
-            "issues_found": issues_found,
-            "processing_time_ms": processing_time,
-        }
-        
-    except Exception as e:
-        logger.error(f"Repair PDF failed: {str(e)}")
-        return {
-            "status": "failed",
-            "error": str(e),
-        }
+    """Repair task removed - feature disabled"""
+    return {"status": "failed", "error": "Repair feature disabled"}

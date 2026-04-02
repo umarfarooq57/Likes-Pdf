@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { FileText, ArrowLeft, Download, Loader2, FileCode } from 'lucide-react';
 import FileDropzone from '@/components/FileDropzone';
 import ProgressTracker from '@/components/ProgressTracker';
+import DownloadButton from '@/components/DownloadButton';
 import toast from 'react-hot-toast';
 import { documentsApi, conversionsApi } from '@/lib/api';
 
@@ -147,10 +148,10 @@ export default function PDFToCSVPage() {
 
                             {resultUrl && (
                                 <div className="mt-6 flex gap-4">
-                                    <a href={resultUrl} download className="flex-1 btn-primary flex items-center justify-center gap-2">
+                                    <DownloadButton url={resultUrl} fallbackName="result.csv" className="flex-1 btn-primary flex items-center justify-center gap-2">
                                         <Download className="w-5 h-5" />
                                         Download CSV
-                                    </a>
+                                    </DownloadButton>
                                     <button onClick={resetTool} className="btn-secondary">
                                         Convert Another
                                     </button>

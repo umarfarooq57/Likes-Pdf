@@ -12,7 +12,7 @@ from app.models import (
     Conversion, Workflow, WorkflowRun,
     Plan, Subscription, Invoice, UsageRecord,
     ScanSession, ScanPage, ScanTemplate,
-    AITask, ChatConversation, ChatMessage, DocumentAnalysis, OCRResult,
+
     PDFProtection, Watermark, AppliedWatermark, DigitalSignature, SigningCertificate, FileEncryption,
     ActivityLog, APIRequestLog, SystemHealth, ErrorLog, JobQueue, Notification,
 )
@@ -24,7 +24,7 @@ async def create_all_tables():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     print("✅ All tables created successfully!")
-    
+
     # Print all created tables
     async with engine.begin() as conn:
         def get_tables(connection):

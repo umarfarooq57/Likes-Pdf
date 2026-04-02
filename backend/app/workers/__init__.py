@@ -12,7 +12,6 @@ from app.workers import (
     optimization_tasks,
     security_tasks,
     scanner_tasks,
-    ai_tasks,
     cleanup_tasks,
 )
 
@@ -23,6 +22,5 @@ __all__ = [
     "optimization_tasks",
     "security_tasks",
     "scanner_tasks",
-    "ai_tasks",
     "cleanup_tasks",
 ]

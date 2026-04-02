@@ -7,7 +7,6 @@ import {
     LogOut,
     Merge,
     Split,
-    Minimize2,
     Clock,
     HardDrive,
     ArrowRight,
@@ -34,7 +33,6 @@ interface Document {
 const quickTools = [
     { name: 'Merge PDF', icon: Merge, href: '/tools/merge', color: 'from-blue-500 to-blue-600' },
     { name: 'Split PDF', icon: Split, href: '/tools/split', color: 'from-green-500 to-green-600' },
-    { name: 'Compress PDF', icon: Minimize2, href: '/tools/compress', color: 'from-orange-500 to-orange-600' },
 ];
 
 export default function DashboardPage() {
@@ -56,8 +54,8 @@ export default function DashboardPage() {
             setUser(userData);
             setDocuments(docsData.documents);
         } catch (error) {
-            toast.error('Please log in to continue');
-            router.push('/login');
+            toast.error('Please continue from the home page');
+            router.push('/');
         } finally {
             setIsLoading(false);
         }
@@ -66,6 +64,22 @@ export default function DashboardPage() {
     const handleLogout = () => {
         authApi.logout();
         router.push('/');
+    };
+
+    const handleDownload = async (id: string, fallbackName?: string) => {
+        try {
+            const { blob, filename } = await documentsApi.downloadBlob(id);
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename || fallbackName || 'download';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+        } catch (err: any) {
+            toast.error(err?.message || 'Download failed');
+        }
     };
 
     const formatSize = (bytes: number) => {
@@ -198,12 +212,12 @@ export default function DashboardPage() {
                                                     {formatSize(doc.file_size)} • {formatDate(doc.created_at)}
                                                 </p>
                                             </div>
-                                            <a
-                                                href={documentsApi.download(doc.id)}
+                                            <button
+                                                onClick={() => handleDownload(doc.id, doc.original_name)}
                                                 className="px-3 py-1 text-sm text-primary-600 hover:bg-primary-50 rounded-lg"
                                             >
                                                 Download
-                                            </a>
+                                            </button>
                                         </div>
                                     ))}
                                 </div>

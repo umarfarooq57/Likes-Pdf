@@ -2,11 +2,13 @@
 Direct Test - runs within the same process to see actual errors
 """
 import asyncio
+import pytest
 from app.core.database import AsyncSessionLocal, create_tables
 from app.services.user_service import UserService
 from app.schemas.user import UserCreate
 
 
+@pytest.mark.asyncio
 async def test_register():
     """Test user registration directly"""
     print("Testing direct registration...")

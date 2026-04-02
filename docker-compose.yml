@@ -5,6 +5,7 @@ services:
   db:
     image: postgres:15-alpine
     container_name: docuforge-db
+    restart: unless-stopped
     environment:
       POSTGRES_USER: docuforge
       POSTGRES_PASSWORD: docuforge123
@@ -23,6 +24,7 @@ services:
   redis:
     image: redis:7-alpine
     container_name: docuforge-redis
+    restart: unless-stopped
     ports:
       - "6379:6379"
     volumes:
@@ -39,6 +41,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: docuforge-api
+    restart: unless-stopped
     environment:
       - DATABASE_URL=postgresql+asyncpg://docuforge:docuforge123@db:5432/docuforge
       - REDIS_URL=redis://redis:6379/0
@@ -54,7 +57,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2
 
   # Celery Worker
   celery-worker:
@@ -62,6 +65,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: docuforge-worker
+    restart: unless-stopped
     environment:
       - DATABASE_URL=postgresql+asyncpg://docuforge:docuforge123@db:5432/docuforge
       - REDIS_URL=redis://redis:6379/0
@@ -75,7 +79,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    command: celery -A app.workers.celery_app worker --loglevel=info --concurrency=4
+    command: celery -A app.workers.celery_app worker --loglevel=info --concurrency=8 --prefetch-multiplier=1 --max-tasks-per-child=100
 
   # Celery Flower (Task Monitor)
   flower:
@@ -83,6 +87,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: docuforge-flower
+    restart: unless-stopped
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
     ports:
@@ -98,8 +103,9 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: docuforge-web
+    restart: unless-stopped
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
     volumes:
       - ./frontend:/app
       - /app/node_modules

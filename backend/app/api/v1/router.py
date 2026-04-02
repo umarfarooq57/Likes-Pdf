@@ -10,8 +10,8 @@ from app.api.v1.endpoints import (
     documents,
     conversions,
     editing,
-    optimization,
-    security,
+    jobs,
+    admin,
 )
 
 
@@ -45,23 +45,16 @@ api_router.include_router(
     tags=["Editing"]
 )
 
-# PDF Optimization (compress, repair, linearize)
+# Job Status & History
 api_router.include_router(
-    optimization.router,
-    prefix="/optimize",
-    tags=["Optimization"]
+    jobs.router,
+    prefix="/jobs",
+    tags=["Jobs"]
 )
 
-# PDF Security (password, watermark, signatures)
+# Admin
 api_router.include_router(
-    security.router,
-    prefix="/security",
-    tags=["Security"]
-)
-
-# PDF Security (password, watermark, signatures)
-api_router.include_router(
-    security.router,
-    prefix="/security",
-    tags=["Security"]
+    admin.router,
+    prefix="/admin",
+    tags=["Admin"]
 )

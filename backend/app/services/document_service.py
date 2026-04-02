@@ -61,6 +61,34 @@ class DocumentService:
 
         return document
 
+    async def create_from_processed(
+        self,
+        original_name: str,
+        storage_key: str,
+        mime_type: str,
+        file_size: int,
+        user_id: Optional[UUID] = None,
+    ) -> Document:
+        """Create a document record for a file already written to processed storage."""
+        file_ext = Path(original_name).suffix.lower().lstrip('.')
+
+        document = Document(
+            user_id=user_id,
+            original_name=original_name,
+            storage_key=storage_key,
+            mime_type=mime_type or "application/octet-stream",
+            file_size=file_size,
+            file_extension=file_ext,
+            status=DocumentStatus.PROCESSED,
+            is_temp=user_id is None,
+            expires_at=datetime.utcnow() + timedelta(hours=24) if user_id is None else None,
+        )
+
+        self.db.add(document)
+        await self.db.commit()
+        await self.db.refresh(document)
+        return document
+
     async def get_by_id(self, document_id) -> Optional[Document]:
         """Get document by ID"""
         # Convert UUID to string if needed (DB stores as string)

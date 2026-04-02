@@ -12,6 +12,11 @@ from fastapi.staticfiles import StaticFiles
 from app.core.config import settings
 from app.core.database import engine, Base
 from app.api.v1.router import api_router
+from fastapi import UploadFile, File, Depends, status, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.core.database import get_db
+from app.services.document_service import DocumentService
+import uuid
 
 
 @asynccontextmanager
@@ -61,6 +66,48 @@ if static_path.exists():
 
 # Include API router
 app.include_router(api_router, prefix=settings.API_V1_STR)
+
+
+# Compatibility endpoints (legacy frontend paths)
+@app.post('/documents/upload')
+async def compat_upload_document(file: UploadFile = File(...), db: AsyncSession = Depends(get_db)):
+    # Reuse DocumentService upload logic
+    try:
+        service = DocumentService(db)
+        document = await service.upload_file(file, user_id=None)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+    return {
+        'file_id': str(document.id),
+        'filename': document.original_name,
+        'size': document.file_size,
+        'size_mb': round(document.file_size / (1024*1024), 2),
+        'mime_type': document.mime_type,
+        'upload_time': document.created_at.isoformat() if hasattr(document, 'created_at') else None,
+        'expires_in_hours': 1,
+    }
+
+
+@app.post('/documents/upload/batch')
+async def compat_upload_batch(files: list[UploadFile] = File(...), db: AsyncSession = Depends(get_db)):
+    service = DocumentService(db)
+    results = []
+    for file in files:
+        try:
+            document = await service.upload_file(file, user_id=None)
+            results.append({
+                'file_id': str(document.id),
+                'filename': document.original_name,
+                'size': document.file_size,
+                'mime_type': document.mime_type,
+            })
+        except Exception:
+            continue
+    return results
 
 
 @app.get("/")

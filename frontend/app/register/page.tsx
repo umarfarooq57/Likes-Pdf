@@ -37,8 +37,8 @@ export default function RegisterPage() {
 
         try {
             await authApi.register(email, password, fullName);
-            toast.success('Account created! Please log in.');
-            router.push('/login');
+            toast.success('Account created successfully.');
+            router.push('/');
         } catch (error: any) {
             toast.error(error.response?.data?.detail || 'Registration failed');
         } finally {
@@ -140,10 +140,7 @@ export default function RegisterPage() {
 
                     <div className="mt-6 text-center">
                         <p className="text-gray-500">
-                            Already have an account?{' '}
-                            <Link href="/login" className="text-primary-600 font-medium hover:text-primary-700">
-                                Sign in
-                            </Link>
+                            Already have an account? Go back to the home page.
                         </p>
                     </div>
                 </div>

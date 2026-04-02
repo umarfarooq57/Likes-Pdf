@@ -11,12 +11,12 @@ export const metadata: Metadata = {
     ),
 
     title: 'DocuForge - Enterprise PDF Platform',
-    description: 'Professional PDF processing platform with AI-powered features. Convert, edit, secure, scan, and optimize your documents online.',
-    keywords: 'PDF converter, PDF editor, merge PDF, split PDF, compress PDF, OCR, document scanner, AI document processing',
+    description: 'Professional PDF processing platform. Convert, edit, and scan your documents online.',
+    keywords: 'PDF converter, PDF editor, merge PDF, split PDF, document scanner, document processing',
 
     openGraph: {
         title: 'DocuForge - Enterprise PDF Platform',
-        description: 'Professional PDF processing with AI-powered features',
+        description: 'Professional PDF processing and document tools',
         type: 'website',
     },
 };

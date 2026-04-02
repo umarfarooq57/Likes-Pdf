@@ -10,8 +10,13 @@ from app.core.config import settings
 
 
 # Async engine
+# Ensure async DB driver is used for PostgreSQL URLs (prefer asyncpg)
+db_url = settings.DATABASE_URL
+if db_url.startswith("postgresql://") and "+asyncpg" not in db_url:
+    db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+
 engine = create_async_engine(
-    settings.DATABASE_URL,
+    db_url,
     echo=settings.DEBUG,
     pool_pre_ping=True,
     pool_size=10,

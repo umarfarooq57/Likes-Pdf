@@ -66,21 +66,10 @@ class Settings(BaseSettings):
     JOB_TIMEOUT: int = 600  # 10 minutes
     MAX_PDF_PAGES: int = 5000
 
-    # AI Configuration
-    OPENAI_API_KEY: Optional[str] = None
-    OPENAI_MODEL: str = "gpt-4-turbo-preview"
-    ANTHROPIC_API_KEY: Optional[str] = None
-    ANTHROPIC_MODEL: str = "claude-3-opus-20240229"
+    # Feature flags
+    DISABLE_WEASYPRINT: bool = False
 
-    # AI Limits
-    AI_MAX_TOKENS: int = 4000
-    AI_TEMPERATURE: float = 0.3
-    AI_MAX_CONTEXT_LENGTH: int = 100000
-
-    # OCR Configuration
-    TESSERACT_PATH: Optional[str] = None
-    OCR_LANGUAGES: str = "eng"
-    OCR_DPI: int = 300
+    # (AI and OCR settings removed)
 
     # Cloud Storage
     AWS_ACCESS_KEY_ID: Optional[str] = None
@@ -121,9 +110,13 @@ class Settings(BaseSettings):
     PROCESSED_FILE_RETENTION: int = 7
     PREMIUM_FILE_RETENTION: int = 30
 
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
+    # Pydantic v2 configuration: use `model_config` and allow extra env vars
+    model_config = {
+        "env_file": ".env",
+        "env_file_encoding": "utf-8",
+        "case_sensitive": True,
+        "extra": "ignore",
+    }
 
 
 settings = Settings()

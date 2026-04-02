@@ -27,8 +27,10 @@ router = APIRouter()
 class PasswordProtectRequest(BaseModel):
     """Request to password-protect a PDF"""
     document_id: str
-    user_password: Optional[str] = Field(None, description="Password to open document")
-    owner_password: Optional[str] = Field(None, description="Password for full access")
+    user_password: Optional[str] = Field(
+        None, description="Password to open document")
+    owner_password: Optional[str] = Field(
+        None, description="Password for full access")
     allow_printing: bool = True
     allow_copying: bool = True
     allow_modification: bool = False
@@ -39,7 +41,7 @@ class PasswordProtectRequest(BaseModel):
 class RemovePasswordRequest(BaseModel):
     """Request to remove password from PDF"""
     document_id: str
-    password: str
+    password: Optional[str] = None
 
 
 class WatermarkTextRequest(BaseModel):
@@ -74,13 +76,7 @@ class AddPageNumbersRequest(BaseModel):
     skip_first: bool = False
 
 
-class MetadataRequest(BaseModel):
-    """Request to set PDF metadata"""
-    document_id: str
-    title: Optional[str] = None
-    author: Optional[str] = None
-    subject: Optional[str] = None
-    keywords: Optional[str] = None
+# Metadata endpoints removed (feature disabled)
 
 
 class SecurityCheckResponse(BaseModel):
@@ -121,26 +117,26 @@ async def password_protect_pdf(
 ):
     """
     Add password protection and permissions to a PDF.
-    
+
     - **user_password**: Required to open the document
     - **owner_password**: Required for full access (edit permissions, remove password)
     """
     doc_service = DocumentService(db)
-    
+
     # Get source document
     document = await doc_service.get_by_id(request.document_id)
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
-    
+
     if document.file_extension.lower() != "pdf":
         raise HTTPException(status_code=400, detail="Document must be a PDF")
-    
+
     # Prepare paths
     input_path = settings.UPLOAD_DIR / document.storage_key
     output_id = str(uuid.uuid4())
     output_path = settings.PROCESSED_DIR / f"{output_id}.pdf"
     settings.PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
-    
+
     try:
         # Apply protection
         permissions = {
@@ -150,7 +146,7 @@ async def password_protect_pdf(
             "allow_annotation": request.allow_annotation,
             "allow_form_filling": request.allow_form_filling,
         }
-        
+
         SecurityEngine.encrypt_pdf(
             input_path=input_path,
             output_path=output_path,
@@ -158,7 +154,7 @@ async def password_protect_pdf(
             owner_password=request.owner_password,
             permissions=permissions
         )
-        
+
         # Create result document record
         result_doc = await doc_service.create_from_processed(
             original_name=f"protected_{document.original_name}",
@@ -167,16 +163,17 @@ async def password_protect_pdf(
             file_size=output_path.stat().st_size,
             user_id=user_id
         )
-        
+
         return OperationResponse(
             success=True,
             message="PDF protected successfully",
             result_document_id=str(result_doc.id),
             download_url=f"/api/v1/documents/{result_doc.id}/download"
         )
-        
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to protect PDF: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to protect PDF: {str(e)}")
 
 
 @router.post("/unlock", response_model=OperationResponse)
@@ -187,25 +184,28 @@ async def remove_pdf_password(
 ):
     """
     Remove password protection from a PDF.
-    Requires the correct user or owner password.
+    Provide the user or owner password in `password` field.
     """
     doc_service = DocumentService(db)
-    
+
     document = await doc_service.get_by_id(request.document_id)
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
-    
+
     input_path = settings.UPLOAD_DIR / document.storage_key
     output_id = str(uuid.uuid4())
     output_path = settings.PROCESSED_DIR / f"{output_id}.pdf"
-    
+    settings.PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
+
     try:
+        # Attempt to decrypt using provided password (or empty string)
+        password = request.password or ""
         SecurityEngine.decrypt_pdf(
             input_path=input_path,
             output_path=output_path,
-            password=request.password
+            password=password
         )
-        
+
         result_doc = await doc_service.create_from_processed(
             original_name=f"unlocked_{document.original_name}",
             storage_key=f"{output_id}.pdf",
@@ -213,18 +213,20 @@ async def remove_pdf_password(
             file_size=output_path.stat().st_size,
             user_id=user_id
         )
-        
+
         return OperationResponse(
             success=True,
             message="PDF unlocked successfully",
             result_document_id=str(result_doc.id),
             download_url=f"/api/v1/documents/{result_doc.id}/download"
         )
-        
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+
+    except ValueError:
+        raise HTTPException(
+            status_code=400, detail="Invalid password provided")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to unlock PDF: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to unlock PDF: {str(e)}")
 
 
 @router.get("/check/{document_id}", response_model=SecurityCheckResponse)
@@ -236,16 +238,16 @@ async def check_pdf_security(
     Check the security status and permissions of a PDF.
     """
     doc_service = DocumentService(db)
-    
+
     document = await doc_service.get_by_id(document_id)
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
-    
+
     input_path = settings.UPLOAD_DIR / document.storage_key
-    
+
     try:
         result = SecurityEngine.check_pdf_protection(input_path)
-        
+
         return SecurityCheckResponse(
             document_id=document_id,
             is_encrypted=result.get("is_encrypted", False),
@@ -253,9 +255,10 @@ async def check_pdf_security(
             permissions=result.get("permissions"),
             metadata=result.get("metadata")
         )
-        
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to check PDF: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to check PDF: {str(e)}")
 
 
 @router.post("/watermark/text", response_model=OperationResponse)
@@ -266,19 +269,19 @@ async def add_text_watermark(
 ):
     """
     Add a text watermark to PDF pages.
-    
+
     Positions: center, diagonal, tiled
     """
     doc_service = DocumentService(db)
-    
+
     document = await doc_service.get_by_id(request.document_id)
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
-    
+
     input_path = settings.UPLOAD_DIR / document.storage_key
     output_id = str(uuid.uuid4())
     output_path = settings.PROCESSED_DIR / f"{output_id}.pdf"
-    
+
     try:
         SecurityEngine.add_text_watermark(
             input_path=input_path,
@@ -291,7 +294,7 @@ async def add_text_watermark(
             position=request.position,
             pages=request.pages
         )
-        
+
         result_doc = await doc_service.create_from_processed(
             original_name=f"watermarked_{document.original_name}",
             storage_key=f"{output_id}.pdf",
@@ -299,16 +302,17 @@ async def add_text_watermark(
             file_size=output_path.stat().st_size,
             user_id=user_id
         )
-        
+
         return OperationResponse(
             success=True,
             message="Watermark added successfully",
             result_document_id=str(result_doc.id),
             download_url=f"/api/v1/documents/{result_doc.id}/download"
         )
-        
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to add watermark: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to add watermark: {str(e)}")
 
 
 @router.post("/watermark/image", response_model=OperationResponse)
@@ -319,24 +323,25 @@ async def add_image_watermark(
 ):
     """
     Add an image watermark to PDF pages.
-    
+
     Positions: center, top-left, top-right, bottom-left, bottom-right
     """
     doc_service = DocumentService(db)
-    
+
     document = await doc_service.get_by_id(request.document_id)
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
-    
+
     watermark_doc = await doc_service.get_by_id(request.watermark_image_id)
     if not watermark_doc:
-        raise HTTPException(status_code=404, detail="Watermark image not found")
-    
+        raise HTTPException(
+            status_code=404, detail="Watermark image not found")
+
     input_path = settings.UPLOAD_DIR / document.storage_key
     watermark_path = settings.UPLOAD_DIR / watermark_doc.storage_key
     output_id = str(uuid.uuid4())
     output_path = settings.PROCESSED_DIR / f"{output_id}.pdf"
-    
+
     try:
         SecurityEngine.add_image_watermark(
             input_path=input_path,
@@ -347,7 +352,7 @@ async def add_image_watermark(
             position=request.position,
             pages=request.pages
         )
-        
+
         result_doc = await doc_service.create_from_processed(
             original_name=f"watermarked_{document.original_name}",
             storage_key=f"{output_id}.pdf",
@@ -355,16 +360,17 @@ async def add_image_watermark(
             file_size=output_path.stat().st_size,
             user_id=user_id
         )
-        
+
         return OperationResponse(
             success=True,
             message="Image watermark added successfully",
             result_document_id=str(result_doc.id),
             download_url=f"/api/v1/documents/{result_doc.id}/download"
         )
-        
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to add watermark: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to add watermark: {str(e)}")
 
 
 @router.post("/page-numbers", response_model=OperationResponse)
@@ -375,20 +381,20 @@ async def add_page_numbers(
 ):
     """
     Add page numbers to a PDF.
-    
+
     Positions: bottom-center, bottom-left, bottom-right, top-center, top-left, top-right
     Format: Use {page} and {total} placeholders
     """
     doc_service = DocumentService(db)
-    
+
     document = await doc_service.get_by_id(request.document_id)
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
-    
+
     input_path = settings.UPLOAD_DIR / document.storage_key
     output_id = str(uuid.uuid4())
     output_path = settings.PROCESSED_DIR / f"{output_id}.pdf"
-    
+
     try:
         SecurityEngine.add_page_numbers(
             input_path=input_path,
@@ -399,7 +405,7 @@ async def add_page_numbers(
             start_page=request.start_page,
             skip_first=request.skip_first
         )
-        
+
         result_doc = await doc_service.create_from_processed(
             original_name=f"numbered_{document.original_name}",
             storage_key=f"{output_id}.pdf",
@@ -407,99 +413,20 @@ async def add_page_numbers(
             file_size=output_path.stat().st_size,
             user_id=user_id
         )
-        
+
         return OperationResponse(
             success=True,
             message="Page numbers added successfully",
             result_document_id=str(result_doc.id),
             download_url=f"/api/v1/documents/{result_doc.id}/download"
         )
-        
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to add page numbers: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to add page numbers: {str(e)}")
 
 
-@router.get("/metadata/{document_id}")
-async def get_pdf_metadata(
-    document_id: str,
-    db: AsyncSession = Depends(get_db)
-):
-    """
-    Get PDF metadata (title, author, creation date, etc.)
-    """
-    doc_service = DocumentService(db)
-    
-    document = await doc_service.get_by_id(document_id)
-    if not document:
-        raise HTTPException(status_code=404, detail="Document not found")
-    
-    input_path = settings.UPLOAD_DIR / document.storage_key
-    
-    try:
-        metadata = SecurityEngine.get_metadata(input_path)
-        return metadata
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get metadata: {str(e)}")
-
-
-@router.post("/metadata", response_model=OperationResponse)
-async def set_pdf_metadata(
-    request: MetadataRequest,
-    user_id: Optional[str] = Depends(get_current_user_id_optional),
-    db: AsyncSession = Depends(get_db)
-):
-    """
-    Set PDF metadata (title, author, subject, keywords)
-    """
-    doc_service = DocumentService(db)
-    
-    document = await doc_service.get_by_id(request.document_id)
-    if not document:
-        raise HTTPException(status_code=404, detail="Document not found")
-    
-    input_path = settings.UPLOAD_DIR / document.storage_key
-    output_id = str(uuid.uuid4())
-    output_path = settings.PROCESSED_DIR / f"{output_id}.pdf"
-    
-    # Build metadata dict from non-None values
-    metadata = {}
-    if request.title:
-        metadata["title"] = request.title
-    if request.author:
-        metadata["author"] = request.author
-    if request.subject:
-        metadata["subject"] = request.subject
-    if request.keywords:
-        metadata["keywords"] = request.keywords
-    
-    if not metadata:
-        raise HTTPException(status_code=400, detail="No metadata provided")
-    
-    try:
-        SecurityEngine.set_metadata(
-            input_path=input_path,
-            output_path=output_path,
-            metadata=metadata
-        )
-        
-        result_doc = await doc_service.create_from_processed(
-            original_name=document.original_name,
-            storage_key=f"{output_id}.pdf",
-            mime_type="application/pdf",
-            file_size=output_path.stat().st_size,
-            user_id=user_id
-        )
-        
-        return OperationResponse(
-            success=True,
-            message="Metadata updated successfully",
-            result_document_id=str(result_doc.id),
-            download_url=f"/api/v1/documents/{result_doc.id}/download"
-        )
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to set metadata: {str(e)}")
+# Metadata endpoints removed — metadata editing feature has been removed from the API
 
 
 @router.get("/thumbnails/{document_id}")
@@ -514,14 +441,14 @@ async def get_page_thumbnails(
     Returns list of thumbnail URLs.
     """
     doc_service = DocumentService(db)
-    
+
     document = await doc_service.get_by_id(document_id)
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
-    
+
     input_path = settings.UPLOAD_DIR / document.storage_key
     output_dir = settings.TEMP_DIR / "thumbnails" / document_id
-    
+
     try:
         thumbnails = SecurityEngine.get_page_thumbnails(
             input_path=input_path,
@@ -529,7 +456,7 @@ async def get_page_thumbnails(
             dpi=dpi,
             max_dimension=max_dimension
         )
-        
+
         # Return relative URLs
         return {
             "document_id": document_id,
@@ -539,7 +466,7 @@ async def get_page_thumbnails(
                 for i in range(len(thumbnails))
             ]
         }
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to generate thumbnails: {str(e)}")
 
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to generate thumbnails: {str(e)}")

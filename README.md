@@ -1,205 +1,154 @@
-# DocuForge - Enterprise PDF Platform
+# PDF Platform - Free Self-Hosted Edition
 
-A production-grade, enterprise-level SaaS platform for PDF processing with 70+ features including AI-powered analysis, OCR, document scanning, and comprehensive security options.
+Production-ready PDF conversion and editing platform. 100% free, self-hosted.
 
-## ✨ Features
+## Quick Start
 
-### PDF Core Operations (15+ Features)
-- ✅ Merge PDFs - Combine multiple PDFs
-- ✅ Split PDF - Split by pages or ranges
-- ✅ Rotate Pages - Any angle rotation
-- ✅ Reorder Pages - Drag and drop
-- ✅ Delete/Extract Pages
-- ✅ Compress PDF - Multiple quality levels
-- ✅ PDF ↔ Images, Word, Excel, PowerPoint
-- ✅ HTML/Markdown to PDF
-
-### Security Features (8+ Features)
-- ✅ Password Protect (AES-256)
-- ✅ Unlock PDF
-- ✅ Text/Image Watermarks
-- ✅ Page Numbers
-- ✅ Digital Signatures
-- ✅ Metadata Editor
-
-### AI-Powered Features (8+ Features)
-- ✅ AI Summarization
-- ✅ Chat with PDF
-- ✅ Document Classification
-- ✅ Keyword Extraction
-- ✅ Resume/Contract Analysis
-
-### Scanner Module (20+ Features)
-- ✅ Document Scanner
-- ✅ Edge Detection & Auto Crop
-- ✅ Perspective Correction
-- ✅ Image Enhancement
-- ✅ OCR (100+ languages)
-- ✅ Searchable PDF Creation
-
-## 🚀 Quick Start
-
-### Prerequisites
-- Docker & Docker Compose
-- Node.js 18+ (for local development)
-- Python 3.11+ (for local development)
-
-### Using Docker (Recommended)
+### Recommended: Docker Compose
 
 ```bash
-# Start all services
-docker-compose up -d
-
-# View logs
-docker-compose logs -f
-
-# Stop services
-docker-compose down
+docker compose up --build
 ```
 
-Services will be available at:
-- **Frontend**: http://localhost:3000
-- **Backend API**: http://localhost:8000
-- **API Docs**: http://localhost:8000/docs
-- **Flower (Task Monitor)**: http://localhost:5555
+Then open:
 
-### Local Development
+- Frontend: http://localhost:3000
+- API: http://localhost:8000
+- API Docs: http://localhost:8000/docs
 
-#### Backend
+### Windows one-command start
+
+```powershell
+.\start-project.ps1
+```
+
+### Local development
+
 ```bash
-cd backend
-
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-
-# Install dependencies
+# Backend
 pip install -r requirements.txt
-
-# Copy environment file
-cp .env.example .env
-
-# Run migrations
-alembic upgrade head
-
-# Start server
 uvicorn app.main:app --reload
-```
 
-#### Start Celery Worker
-```bash
-cd backend
-celery -A app.workers.celery_app worker --loglevel=info
-```
-
-#### Frontend
-```bash
+# Frontend
 cd frontend
-
-# Install dependencies
 npm install
-
-# Start development server
 npm run dev
 ```
 
-## 📁 Project Structure
+## Features (Phase 0)
 
-```
-docuforge/
-├── backend/                # FastAPI Backend
-│   ├── app/
-│   │   ├── api/           # API endpoints
-│   │   ├── core/          # Config, DB, Security
-│   │   ├── models/        # SQLAlchemy models
-│   │   ├── schemas/       # Pydantic schemas
-│   │   ├── services/      # Business logic
-│   │   ├── engines/       # PDF processing
-│   │   └── workers/       # Celery tasks
-│   ├── migrations/        # Alembic migrations
-│   └── tests/             # Pytest tests
-│
-├── frontend/              # Next.js Frontend
-│   ├── app/               # App router pages
-│   ├── components/        # React components
-│   └── lib/               # Utilities & API client
-│
-└── docker-compose.yml     # Development stack
-```
-
-## 🛠️ Available Tools
-
-### Document Editing
-- ✅ Merge PDFs
-- ✅ Split PDF
-- ✅ Rotate Pages
-- ✅ Reorder Pages
-- ✅ Delete Pages
-- ✅ Extract Pages
-
-### Conversions
-- ✅ PDF → Images (PNG, JPG)
+- ✅ PDF → Word (.docx)
+- ✅ PDF → Images (PNG, ZIP)
 - ✅ Images → PDF
-- ✅ Word → PDF
-- ✅ Excel → PDF
-- ✅ PowerPoint → PDF
+- ✅ Office → PDF (Word, Excel, PowerPoint)
 - ✅ HTML → PDF
-- ✅ Markdown → PDF
 
-### Optimization
-- ✅ Compress PDF
-- ✅ Linearize (Web Optimize)
-- ✅ Repair Corrupt PDF
+## System Requirements
 
-## 🔒 Security Features
+**For development**:
+- Python 3.11+
+- System packages: `wkhtmltopdf`, `libreoffice`, `poppler-utils`
+- Python packages: `pymupdf` for full PDF editing, `pypdf` for merge/split fallback
 
-- JWT Authentication with refresh tokens
-- Password hashing with bcrypt
-- Rate limiting ready
-- CORS protection
-- File validation
+**For production (Docker)**:
+- Docker & Docker Compose
+- 2GB RAM minimum
+- 20GB storage
 
-## 🧪 Testing
+## Installation
+
+### Ubuntu/Debian
 
 ```bash
-# Backend tests
-cd backend
-pytest tests/ -v
+# Install system dependencies
+sudo apt update
+sudo apt install -y wkhtmltopdf libreoffice-nogui poppler-utils python3-magic
 
-# Frontend tests
-cd frontend
-npm test
+# Install Python dependencies
+pip install -r requirements.txt
 ```
 
-## 📝 API Documentation
+### Windows
 
-When the backend is running, access:
-- Swagger UI: http://localhost:8000/docs
-- ReDoc: http://localhost:8000/redoc
+1. Install Python 3.11+
+2. Install wkhtmltopdf from https://wkhtmltopdf.org/downloads.html
+3. Install LibreOffice from https://www.libreoffice.org/download
+4. Install poppler: Download from https://github.com/oschwartz10612/poppler-windows/releases
+5. Add all to PATH
+6. `pip install -r requirements.txt`
+7. If merge/split fails, install `pymupdf` or `pypdf` explicitly:
 
-## 🔧 Environment Variables
-
-### Backend (.env)
-```
-SECRET_KEY=your-secret-key
-DATABASE_URL=postgresql+asyncpg://user:pass@localhost:5432/db
-REDIS_URL=redis://localhost:6379/0
-CELERY_BROKER_URL=redis://localhost:6379/0
-```
-
-### Frontend (.env.local)
-```
-NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
+```bash
+pip install pymupdf
+# or
+pip install pypdf
 ```
 
-## 📦 Tech Stack
+## Usage
 
-- **Frontend**: Next.js 14, React, TailwindCSS, Framer Motion
-- **Backend**: FastAPI, SQLAlchemy, Pydantic
-- **Database**: PostgreSQL
-- **Queue**: Redis + Celery
-- **PDF Processing**: PyMuPDF, WeasyPrint
+### Start Server
 
-## 📄 License
+```bash
+python -m app.main
+```
 
-MIT License
+### API Examples
+
+**Upload file**:
+```bash
+curl -X POST http://localhost:8000/api/v1/documents/upload \
+  -F "file=@document.pdf"
+```
+
+**Merge PDFs**:
+```bash
+curl -X POST http://localhost:8000/api/v1/edit/merge \
+  -H "Content-Type: application/json" \
+  -d '{
+    "document_ids": ["id-1", "id-2"]
+  }'
+```
+
+**Download result**:
+```bash
+curl http://localhost:8000/api/v1/convert/output-file-id/download \
+  -o result.docx
+```
+
+## Docker Deployment
+
+The repository is ready to run with Docker Compose.
+
+```bash
+docker compose up --build
+```
+
+For Windows PowerShell, use `start-project.ps1`.
+
+## Project Structure
+
+```
+app/
+├── main.py              # FastAPI application
+├── config.py            # Configuration
+├── api/
+│   └── routes/          # API endpoints
+├── core/
+│   └── conversion/      # Conversion engine
+└── utils/               # Utilities
+```
+
+## Documentation
+
+- **QUICKSTART.md** - 5-minute setup guide
+- **implementation_plan.md** - Development roadmap
+- **deployment_guide.md** - Production deployment
+- **architecture_review.md** - Technical deep dive
+
+## License
+
+MIT License - Free for personal and commercial use
+
+## Support
+
+For issues and questions, see documentation files.

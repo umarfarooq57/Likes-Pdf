@@ -86,43 +86,6 @@ body {
   @apply bg-white/80 backdrop-blur-md rounded-2xl shadow-xl border border-white/20 p-6;
 }
 
-.card-hover {
-  @apply hover:shadow-2xl hover:-translate-y-1 transition-all duration-300;
-}
-
-/* Tool card */
-.tool-card {
-  @apply relative bg-gradient-to-br from-white/90 to-white/60 backdrop-blur-xl rounded-2xl p-6 border border-white/30 shadow-lg hover:shadow-2xl transform hover:-translate-y-2 transition-all duration-300 cursor-pointer;
-}
-
-.tool-card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 1rem;
-  padding: 2px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.tool-card:hover::before {
-  opacity: 1;
-}
-
-/* Dropzone */
-.dropzone {
-  @apply border-2 border-dashed border-gray-300 rounded-2xl p-12 text-center cursor-pointer transition-all duration-300;
-}
-
-.dropzone-active {
-  @apply border-primary-500 bg-primary-50;
-}
-
 /* Progress bar */
 .progress-bar {
   @apply h-2 bg-gray-200 rounded-full overflow-hidden;

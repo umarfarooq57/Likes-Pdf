@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { FileText, ArrowLeft, Download, Loader2, RotateCw } from 'lucide-react';
 import FileDropzone from '@/components/FileDropzone';
 import ProgressTracker from '@/components/ProgressTracker';
+import DownloadButton from '@/components/DownloadButton';
 import toast from 'react-hot-toast';
 import { documentsApi, editingApi } from '@/lib/api';
 
@@ -259,14 +260,10 @@ export default function RotatePDFPage() {
 
                             {resultUrl && (
                                 <div className="mt-6 flex gap-4">
-                                    <a
-                                        href={resultUrl}
-                                        download
-                                        className="flex-1 btn-primary flex items-center justify-center gap-2"
-                                    >
+                                    <DownloadButton url={resultUrl} fallbackName="rotated.pdf" className="flex-1 btn-primary flex items-center justify-center gap-2">
                                         <Download className="w-5 h-5" />
                                         Download Rotated PDF
-                                    </a>
+                                    </DownloadButton>
                                     <button
                                         onClick={resetTool}
                                         className="btn-secondary"
