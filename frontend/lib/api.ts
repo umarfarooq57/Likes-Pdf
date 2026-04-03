@@ -12,22 +12,20 @@ const resolveApiBaseUrl = () => {
 
     if (typeof window !== 'undefined') {
         const host = window.location.hostname.toLowerCase();
-        const isVercelHost = host === 'likespdf.vercel.app' || host.endsWith('.vercel.app');
+        const isProduction = host === 'likespdf.vercel.app' || host.endsWith('.vercel.app');
 
-        if (isVercelHost) {
-            // Never use localhost-like API URLs on a public Vercel deployment.
-            const isLocalEnvUrl = /localhost|127\.0\.0\.1|0\.0\.0\.0/i.test(envUrl);
-            if (!envUrl || isLocalEnvUrl) {
+        if (isProduction) {
+            // Production: must use valid non-localhost URL
+            if (!envUrl || /localhost|127\.0\.0\.1|0\.0\.0\.0/i.test(envUrl)) {
+                console.warn('[DocuForge] Production environment detected. NEXT_PUBLIC_API_URL not configured properly. Defaulting to Railway backend.');
                 return RAILWAY_BACKEND_URL;
             }
+            return envUrl;
         }
     }
 
-    if (envUrl) {
-        return envUrl;
-    }
-
-    return 'http://127.0.0.1:8000';
+    // Development: use env if available, fallback to localhost
+    return envUrl || 'http://127.0.0.1:8000';
 };
 
 const API_BASE_URL = resolveApiBaseUrl();
