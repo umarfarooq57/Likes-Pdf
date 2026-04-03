@@ -5,6 +5,8 @@
 
 import axios, { AxiosInstance, AxiosError } from 'axios';
 
+const RAILWAY_BACKEND_URL = 'https://likes-pdf-backend-production-668e.up.railway.app';
+
 const resolveApiBaseUrl = () => {
     const envUrl = (process.env.NEXT_PUBLIC_API_URL || '').trim();
 
@@ -16,7 +18,7 @@ const resolveApiBaseUrl = () => {
             // Never use localhost-like API URLs on a public Vercel deployment.
             const isLocalEnvUrl = /localhost|127\.0\.0\.1|0\.0\.0\.0/i.test(envUrl);
             if (!envUrl || isLocalEnvUrl) {
-                return 'https://likes-pdf-backend-production-668e.up.railway.app';
+                return RAILWAY_BACKEND_URL;
             }
         }
     }
@@ -141,9 +143,13 @@ export const documentsApi = {
             response = await api.post('/api/v1/documents/upload', formData, requestConfig);
         } catch (error: any) {
             const statusCode = error?.response?.status;
+            const isNetworkLocalhostError = !statusCode && /127\.0\.0\.1|localhost/i.test(String(API_BASE_URL));
             if (statusCode === 404) {
                 // Fallback for legacy production API shape
                 response = await api.post('/api/upload', formData, requestConfig);
+            } else if (isNetworkLocalhostError) {
+                // If app was built with localhost API by mistake, retry directly on Railway.
+                response = await axios.post(`${RAILWAY_BACKEND_URL}/api/upload`, formData, requestConfig);
             } else {
                 throw error;
             }
