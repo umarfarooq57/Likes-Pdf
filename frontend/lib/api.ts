@@ -75,3 +75,214 @@ api.interceptors.response.use(
         return Promise.reject(error);
     }
 );
+
+// ============================================================================
+// API Endpoints
+// ============================================================================
+
+export const documentsApi = {
+    async upload(file: File, onProgress?: (progress: number) => void) {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const response = await api.post('/api/upload', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+            onUploadProgress: (progressEvent) => {
+                if (onProgress && progressEvent.total) {
+                    const progress = Math.round((progressEvent.loaded / progressEvent.total) * 100);
+                    onProgress(progress);
+                }
+            },
+        });
+
+        return response.data;
+    },
+
+    async downloadBlobUrl(url: string) {
+        const response = await api.get(url, {
+            responseType: 'blob',
+        });
+
+        // Extract filename from Content-Disposition header or URL
+        let filename = 'download';
+        const contentDisposition = response.headers['content-disposition'];
+        if (contentDisposition) {
+            const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+            if (filenameMatch) {
+                filename = filenameMatch[1];
+            }
+        }
+
+        return {
+            blob: response.data,
+            filename,
+        };
+    },
+};
+
+export const conversionsApi = {
+    async merge(fileIds: string[]) {
+        const response = await api.post('/api/v1/conversions/merge', {
+            file_ids: fileIds,
+        });
+        return response.data;
+    },
+
+    async pdfToText(fileId: string) {
+        const response = await api.post('/api/v1/conversions/pdf-to-text', {
+            file_id: fileId,
+        });
+        return response.data;
+    },
+
+    async pdfToWord(fileId: string) {
+        const response = await api.post('/api/v1/conversions/pdf-to-word', {
+            file_id: fileId,
+        });
+        return response.data;
+    },
+
+    async pdfToExcel(fileId: string) {
+        const response = await api.post('/api/v1/conversions/pdf-to-excel', {
+            file_id: fileId,
+        });
+        return response.data;
+    },
+
+    async pdfToCsv(fileId: string) {
+        const response = await api.post('/api/v1/conversions/pdf-to-csv', {
+            file_id: fileId,
+        });
+        return response.data;
+    },
+
+    async pdfToJson(fileId: string) {
+        const response = await api.post('/api/v1/conversions/pdf-to-json', {
+            file_id: fileId,
+        });
+        return response.data;
+    },
+
+    async pdfToXml(fileId: string) {
+        const response = await api.post('/api/v1/conversions/pdf-to-xml', {
+            file_id: fileId,
+        });
+        return response.data;
+    },
+
+    async wordToPdf(fileId: string) {
+        const response = await api.post('/api/v1/conversions/word-to-pdf', {
+            file_id: fileId,
+        });
+        return response.data;
+    },
+
+    async excelToPdf(fileId: string) {
+        const response = await api.post('/api/v1/conversions/excel-to-pdf', {
+            file_id: fileId,
+        });
+        return response.data;
+    },
+
+    async csvToPdf(fileId: string) {
+        const response = await api.post('/api/v1/conversions/csv-to-pdf', {
+            file_id: fileId,
+        });
+        return response.data;
+    },
+
+    async jsonToPdf(fileId: string) {
+        const response = await api.post('/api/v1/conversions/json-to-pdf', {
+            file_id: fileId,
+        });
+        return response.data;
+    },
+
+    async imagesToPdf(fileIds: string[]) {
+        const response = await api.post('/api/v1/conversions/images-to-pdf', {
+            file_ids: fileIds,
+        });
+        return response.data;
+    },
+
+    async pdfToImages(fileId: string, options?: { format?: string; dpi?: number }) {
+        const response = await api.post('/api/v1/conversions/pdf-to-images', {
+            file_id: fileId,
+            ...options,
+        });
+        return response.data;
+    },
+};
+
+export const editingApi = {
+    async merge(fileIds: string[]) {
+        const response = await api.post('/api/v1/editing/merge', {
+            file_ids: fileIds,
+        });
+        return response.data;
+    },
+
+    async deletePages(fileId: string, pageNumbers: number[]) {
+        const response = await api.post('/api/v1/editing/delete-pages', {
+            file_id: fileId,
+            page_numbers: pageNumbers,
+        });
+        return response.data;
+    },
+};
+
+export const optimizationApi = {
+    async compress(fileId: string, quality?: string) {
+        const response = await api.post('/api/v1/optimization/compress', {
+            file_id: fileId,
+            quality: quality || 'medium',
+        });
+        return response.data;
+    },
+};
+
+export const securityApi = {
+    async addPassword(fileId: string, password: string) {
+        const response = await api.post('/api/v1/security/add-password', {
+            file_id: fileId,
+            password,
+        });
+        return response.data;
+    },
+
+    async removePassword(fileId: string, password: string) {
+        const response = await api.post('/api/v1/security/remove-password', {
+            file_id: fileId,
+            password,
+        });
+        return response.data;
+    },
+};
+
+export const authApi = {
+    async login(username: string, password: string) {
+        const response = await api.post('/api/v1/auth/login', {
+            username,
+            password,
+        });
+        return response.data;
+    },
+
+    async register(email: string, password: string, username?: string) {
+        const response = await api.post('/api/v1/auth/register', {
+            email,
+            password,
+            username: username || email,
+        });
+        return response.data;
+    },
+
+    async logout() {
+        const response = await api.post('/api/v1/auth/logout');
+        return response.data;
+    },
+};
+
+export default api;
