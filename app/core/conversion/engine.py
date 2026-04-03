@@ -6,6 +6,7 @@ import os
 import time
 import uuid
 import logging
+from importlib import import_module
 from typing import Dict, Any
 
 from app.config import settings
@@ -25,41 +26,93 @@ class ConversionEngine:
     
     def _register_converters(self):
         """Register all available converters"""
-        # Import converters
-        from app.core.conversion.converters.pdf_to_word import PDFToWordConverter
-        from app.core.conversion.converters.pdf_to_images import PDFToImagesConverter
-        from app.core.conversion.converters.pdf_to_excel import PDFToExcelConverter
-        from app.core.conversion.converters.images_to_pdf import ImagesToPDFConverter
-        from app.core.conversion.converters.office_to_pdf import OfficeToPDFConverter
-        from app.core.conversion.converters.html_to_pdf import HTMLToPDFConverter
-        from app.core.conversion.converters.merge_pdf import MergePDFConverter
-        from app.core.conversion.converters.split_pdf import SplitPDFConverter
-        from app.core.conversion.converters.extract_pages import ExtractPagesConverter
-        from app.core.conversion.converters.rotate_pdf import RotatePDFConverter
-        from app.core.conversion.converters.compress_pdf import CompressPDFConverter
-        from app.core.conversion.converters.extract_text import ExtractTextConverter
-        from app.core.conversion.converters.extract_metadata import ExtractMetadataConverter
-        from app.core.conversion.converters.password_protect import PasswordProtectConverter
-        from app.core.conversion.converters.remove_password import RemovePasswordConverter
+        def load_converter(module_name: str, class_name: str):
+            try:
+                module = import_module(module_name)
+                return getattr(module, class_name)
+            except Exception as exc:
+                logger.warning(f"Skipping converter {class_name}: {exc}")
+                return None
+
+        PDFToWordConverter = load_converter(
+            "app.core.conversion.converters.pdf_to_word", "PDFToWordConverter"
+        )
+        PDFToImagesConverter = load_converter(
+            "app.core.conversion.converters.pdf_to_images", "PDFToImagesConverter"
+        )
+        PDFToExcelConverter = load_converter(
+            "app.core.conversion.converters.pdf_to_excel", "PDFToExcelConverter"
+        )
+        ImagesToPDFConverter = load_converter(
+            "app.core.conversion.converters.images_to_pdf", "ImagesToPDFConverter"
+        )
+        OfficeToPDFConverter = load_converter(
+            "app.core.conversion.converters.office_to_pdf", "OfficeToPDFConverter"
+        )
+        HTMLToPDFConverter = load_converter(
+            "app.core.conversion.converters.html_to_pdf", "HTMLToPDFConverter"
+        )
+        MergePDFConverter = load_converter(
+            "app.core.conversion.converters.merge_pdf", "MergePDFConverter"
+        )
+        SplitPDFConverter = load_converter(
+            "app.core.conversion.converters.split_pdf", "SplitPDFConverter"
+        )
+        ExtractPagesConverter = load_converter(
+            "app.core.conversion.converters.extract_pages", "ExtractPagesConverter"
+        )
+        RotatePDFConverter = load_converter(
+            "app.core.conversion.converters.rotate_pdf", "RotatePDFConverter"
+        )
+        CompressPDFConverter = load_converter(
+            "app.core.conversion.converters.compress_pdf", "CompressPDFConverter"
+        )
+        ExtractTextConverter = load_converter(
+            "app.core.conversion.converters.extract_text", "ExtractTextConverter"
+        )
+        ExtractMetadataConverter = load_converter(
+            "app.core.conversion.converters.extract_metadata", "ExtractMetadataConverter"
+        )
+        PasswordProtectConverter = load_converter(
+            "app.core.conversion.converters.password_protect", "PasswordProtectConverter"
+        )
+        RemovePasswordConverter = load_converter(
+            "app.core.conversion.converters.remove_password", "RemovePasswordConverter"
+        )
 
         # Conversion features (5)
-        self.converters["pdf_to_word"] = PDFToWordConverter()
-        self.converters["pdf_to_images"] = PDFToImagesConverter()
-        self.converters["pdf_to_excel"] = PDFToExcelConverter()
-        self.converters["images_to_pdf"] = ImagesToPDFConverter()
-        self.converters["office_to_pdf"] = OfficeToPDFConverter()
-        self.converters["html_to_pdf"] = HTMLToPDFConverter()
+        if PDFToWordConverter:
+            self.converters["pdf_to_word"] = PDFToWordConverter()
+        if PDFToImagesConverter:
+            self.converters["pdf_to_images"] = PDFToImagesConverter()
+        if PDFToExcelConverter:
+            self.converters["pdf_to_excel"] = PDFToExcelConverter()
+        if ImagesToPDFConverter:
+            self.converters["images_to_pdf"] = ImagesToPDFConverter()
+        if OfficeToPDFConverter:
+            self.converters["office_to_pdf"] = OfficeToPDFConverter()
+        if HTMLToPDFConverter:
+            self.converters["html_to_pdf"] = HTMLToPDFConverter()
 
         # Editing features (9)
-        self.converters["merge_pdf"] = MergePDFConverter()
-        self.converters["split_pdf"] = SplitPDFConverter()
-        self.converters["extract_pages"] = ExtractPagesConverter()
-        self.converters["rotate_pdf"] = RotatePDFConverter()
-        self.converters["compress_pdf"] = CompressPDFConverter()
-        self.converters["extract_text"] = ExtractTextConverter()
-        self.converters["extract_metadata"] = ExtractMetadataConverter()
-        self.converters["password_protect"] = PasswordProtectConverter()
-        self.converters["remove_password"] = RemovePasswordConverter()
+        if MergePDFConverter:
+            self.converters["merge_pdf"] = MergePDFConverter()
+        if SplitPDFConverter:
+            self.converters["split_pdf"] = SplitPDFConverter()
+        if ExtractPagesConverter:
+            self.converters["extract_pages"] = ExtractPagesConverter()
+        if RotatePDFConverter:
+            self.converters["rotate_pdf"] = RotatePDFConverter()
+        if CompressPDFConverter:
+            self.converters["compress_pdf"] = CompressPDFConverter()
+        if ExtractTextConverter:
+            self.converters["extract_text"] = ExtractTextConverter()
+        if ExtractMetadataConverter:
+            self.converters["extract_metadata"] = ExtractMetadataConverter()
+        if PasswordProtectConverter:
+            self.converters["password_protect"] = PasswordProtectConverter()
+        if RemovePasswordConverter:
+            self.converters["remove_password"] = RemovePasswordConverter()
 
         logger.info(f"Registered {len(self.converters)} converters")
     

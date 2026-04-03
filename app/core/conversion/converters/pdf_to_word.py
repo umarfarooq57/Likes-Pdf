@@ -5,7 +5,6 @@ Uses pdf2docx library
 import os
 import logging
 from typing import Dict, Any
-from pdf2docx import Converter
 
 from app.core.conversion.converters.base import BaseConverter
 
@@ -35,6 +34,13 @@ class PDFToWordConverter(BaseConverter):
         
         try:
             logger.info(f"Converting PDF to Word: {input_path}")
+
+            try:
+                from pdf2docx import Converter
+            except Exception as exc:
+                raise RuntimeError(
+                    "PDF to Word conversion is unavailable on this server"
+                ) from exc
             
             # Get options
             start_page = options.get("start_page", 0)
