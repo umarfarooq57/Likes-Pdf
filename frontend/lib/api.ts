@@ -120,6 +120,36 @@ export const documentsApi = {
             filename,
         };
     },
+
+    async list(page = 1, pageSize = 20) {
+        const response = await api.get('/api/v1/documents', {
+            params: {
+                page,
+                page_size: pageSize,
+            },
+        });
+        return response.data;
+    },
+
+    async downloadBlob(documentId: string) {
+        const response = await api.get(`/api/v1/documents/${documentId}/download`, {
+            responseType: 'blob',
+        });
+
+        let filename = `document-${documentId}.pdf`;
+        const contentDisposition = response.headers['content-disposition'];
+        if (contentDisposition) {
+            const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+            if (filenameMatch) {
+                filename = filenameMatch[1];
+            }
+        }
+
+        return {
+            blob: response.data,
+            filename,
+        };
+    },
 };
 
 export const conversionsApi = {
@@ -193,8 +223,23 @@ export const conversionsApi = {
         return response.data;
     },
 
+    async htmlToPdf(htmlContent?: string, url?: string) {
+        const response = await api.post('/api/v1/conversions/html-to-pdf', {
+            html_content: htmlContent,
+            url,
+        });
+        return response.data;
+    },
+
     async jsonToPdf(fileId: string) {
         const response = await api.post('/api/v1/conversions/json-to-pdf', {
+            file_id: fileId,
+        });
+        return response.data;
+    },
+
+    async pptToPdf(fileId: string) {
+        const response = await api.post('/api/v1/conversions/ppt-to-pdf', {
             file_id: fileId,
         });
         return response.data;
@@ -231,6 +276,45 @@ export const editingApi = {
         });
         return response.data;
     },
+
+    async split(
+        fileId: string,
+        mode: 'pages' | 'range',
+        pages?: number[],
+        ranges?: string[]
+    ) {
+        const response = await api.post('/api/v1/editing/split', {
+            file_id: fileId,
+            mode,
+            pages,
+            ranges,
+        });
+        return response.data;
+    },
+
+    async rotate(fileId: string, rotations: Record<number, number>) {
+        const response = await api.post('/api/v1/editing/rotate', {
+            file_id: fileId,
+            page_rotations: rotations,
+        });
+        return response.data;
+    },
+
+    async reorder(fileId: string, pageOrder: number[]) {
+        const response = await api.post('/api/v1/editing/reorder', {
+            file_id: fileId,
+            page_order: pageOrder,
+        });
+        return response.data;
+    },
+
+    async extractPages(fileId: string, pageNumbers: number[]) {
+        const response = await api.post('/api/v1/editing/extract-pages', {
+            file_id: fileId,
+            page_numbers: pageNumbers,
+        });
+        return response.data;
+    },
 };
 
 export const optimizationApi = {
@@ -259,6 +343,15 @@ export const securityApi = {
         });
         return response.data;
     },
+
+    async getThumbnails(fileId: string, pages: 'all' | number[] = 'all', width = 150) {
+        const response = await api.post('/api/v1/security/thumbnails', {
+            file_id: fileId,
+            pages,
+            width,
+        });
+        return response.data;
+    },
 };
 
 export const authApi = {
@@ -281,6 +374,11 @@ export const authApi = {
 
     async logout() {
         const response = await api.post('/api/v1/auth/logout');
+        return response.data;
+    },
+
+    async getProfile() {
+        const response = await api.get('/api/v1/auth/me');
         return response.data;
     },
 };
