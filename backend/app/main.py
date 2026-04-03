@@ -69,6 +69,51 @@ if static_path.exists():
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
 
+# Production Proxy Endpoints - Next.js forwards /api/* requests here
+@app.post('/api/upload')
+async def api_upload(file: UploadFile = File(...), db: AsyncSession = Depends(get_db)):
+    """Production upload endpoint for Next.js same-origin proxy"""
+    try:
+        service = DocumentService(db)
+        document = await service.upload_file(file, user_id=None)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+    return {
+        'id': str(document.id),
+        'file_id': str(document.id),
+        'filename': document.original_name,
+        'size': document.file_size,
+        'size_mb': round(document.file_size / (1024*1024), 2),
+        'mime_type': document.mime_type,
+        'upload_time': document.created_at.isoformat() if hasattr(document, 'created_at') else None,
+        'expires_in_hours': 1,
+    }
+
+
+@app.post('/api/upload/batch')
+async def api_upload_batch(files: list[UploadFile] = File(...), db: AsyncSession = Depends(get_db)):
+    """Batch upload endpoint for Next.js proxy"""
+    service = DocumentService(db)
+    results = []
+    for file in files:
+        try:
+            document = await service.upload_file(file, user_id=None)
+            results.append({
+                'id': str(document.id),
+                'file_id': str(document.id),
+                'filename': document.original_name,
+                'size': document.file_size,
+                'mime_type': document.mime_type,
+            })
+        except Exception:
+            continue
+    return results
+
+
 # Compatibility endpoints (legacy frontend paths)
 @app.post('/documents/upload')
 async def compat_upload_document(file: UploadFile = File(...), db: AsyncSession = Depends(get_db)):
