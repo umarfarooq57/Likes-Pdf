@@ -97,7 +97,11 @@ export const documentsApi = {
             },
         });
 
-        return response.data;
+        const data = response.data || {};
+        return {
+            ...data,
+            id: data.id || data.file_id || data.fileId,
+        };
     },
 
     async downloadBlobUrl(url: string) {
@@ -261,10 +265,32 @@ export const conversionsApi = {
 
 export const editingApi = {
     async merge(fileIds: string[]) {
-        const response = await api.post('/api/v1/edit/merge', {
-            document_ids: fileIds,
-        });
-        return response.data;
+        try {
+            const response = await api.post('/api/v1/edit/merge', {
+                document_ids: fileIds,
+            });
+            return response.data;
+        } catch (error: any) {
+            // Legacy Railway backend exposes a single synchronous /api/convert endpoint.
+            if (error?.response?.status === 404 && fileIds.length > 0) {
+                const [firstFileId, ...restFileIds] = fileIds;
+                const fallback = await api.post('/api/convert', {
+                    file_id: firstFileId,
+                    conversion_type: 'merge_pdf',
+                    options: {
+                        additional_file_ids: restFileIds,
+                    },
+                });
+
+                const data = fallback.data || {};
+                return {
+                    ...data,
+                    id: data.id || data.output_file_id,
+                    result_url: data.result_url || data.download_url,
+                };
+            }
+            throw error;
+        }
     },
 
     async deletePages(fileId: string, pageNumbers: number[]) {
