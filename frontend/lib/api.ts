@@ -117,16 +117,29 @@ export const documentsApi = {
         const formData = new FormData();
         formData.append('file', file);
 
-        // Backend exposes document upload under the v1 API
-        const response = await api.post('/api/v1/documents/upload', formData, {
+        const requestConfig = {
             headers: { 'Content-Type': 'multipart/form-data' },
-            onUploadProgress: (progressEvent) => {
+            onUploadProgress: (progressEvent: any) => {
                 if (onProgress && progressEvent.total) {
                     const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
                     onProgress(progress);
                 }
             },
-        });
+        };
+
+        let response;
+        try {
+            // Prefer v1 API when available
+            response = await api.post('/api/v1/documents/upload', formData, requestConfig);
+        } catch (error: any) {
+            const statusCode = error?.response?.status;
+            if (statusCode === 404) {
+                // Fallback for legacy production API shape
+                response = await api.post('/api/upload', formData, requestConfig);
+            } else {
+                throw error;
+            }
+        }
 
         const data = response.data || {};
 
@@ -145,12 +158,23 @@ export const documentsApi = {
         const formData = new FormData();
         files.forEach((file) => formData.append('files', file));
 
-        // Backend batch upload path
-        const response = await api.post('/api/v1/documents/upload/batch', formData, {
-            headers: { 'Content-Type': 'multipart/form-data' },
-        });
+        try {
+            // Backend batch upload path
+            const response = await api.post('/api/v1/documents/upload/batch', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
+            return response.data;
+        } catch (error: any) {
+            // Legacy backend has only single-file upload endpoint.
+            if (error?.response?.status !== 404) {
+                throw error;
+            }
 
-        return response.data;
+            const uploads = await Promise.all(
+                files.map((file) => documentsApi.upload(file))
+            );
+            return uploads;
+        }
     },
 
     list: async (page = 1, pageSize = 20) => {
