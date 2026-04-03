@@ -4,10 +4,7 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
 
-const RAW_API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-const API_V1_BASE_URL = RAW_API_BASE_URL.replace(/\/+$/, '').endsWith('/api/v1')
-    ? RAW_API_BASE_URL.replace(/\/+$/, '')
-    : `${RAW_API_BASE_URL.replace(/\/+$/, '')}/api/v1`;
+const API_V1_BASE_URL = '/api/v1';
 
 interface ProgressTrackerProps {
     conversionId: string;

@@ -161,70 +161,70 @@ export const conversionsApi = {
     },
 
     async pdfToText(fileId: string) {
-        const response = await api.post('/api/v1/conversions/pdf-to-text', {
-            file_id: fileId,
+        const response = await api.post('/api/v1/convert/pdf-to-text', {
+            document_id: fileId,
         });
         return response.data;
     },
 
     async pdfToWord(fileId: string) {
-        const response = await api.post('/api/v1/conversions/pdf-to-word', {
-            file_id: fileId,
+        const response = await api.post('/api/v1/convert/pdf-to-word', {
+            document_id: fileId,
         });
         return response.data;
     },
 
     async pdfToExcel(fileId: string) {
-        const response = await api.post('/api/v1/conversions/pdf-to-excel', {
-            file_id: fileId,
+        const response = await api.post('/api/v1/convert/pdf-to-excel', {
+            document_id: fileId,
         });
         return response.data;
     },
 
     async pdfToCsv(fileId: string) {
-        const response = await api.post('/api/v1/conversions/pdf-to-csv', {
-            file_id: fileId,
+        const response = await api.post('/api/v1/convert/pdf-to-csv', {
+            document_id: fileId,
         });
         return response.data;
     },
 
     async pdfToJson(fileId: string) {
-        const response = await api.post('/api/v1/conversions/pdf-to-json', {
-            file_id: fileId,
+        const response = await api.post('/api/v1/convert/pdf-to-json', {
+            document_id: fileId,
         });
         return response.data;
     },
 
     async pdfToXml(fileId: string) {
-        const response = await api.post('/api/v1/conversions/pdf-to-xml', {
-            file_id: fileId,
+        const response = await api.post('/api/v1/convert/pdf-to-xml', {
+            document_id: fileId,
         });
         return response.data;
     },
 
     async wordToPdf(fileId: string) {
-        const response = await api.post('/api/v1/conversions/word-to-pdf', {
-            file_id: fileId,
+        const response = await api.post('/api/v1/convert/word-to-pdf', {
+            document_id: fileId,
         });
         return response.data;
     },
 
     async excelToPdf(fileId: string) {
-        const response = await api.post('/api/v1/conversions/excel-to-pdf', {
-            file_id: fileId,
+        const response = await api.post('/api/v1/convert/excel-to-pdf', {
+            document_id: fileId,
         });
         return response.data;
     },
 
     async csvToPdf(fileId: string) {
-        const response = await api.post('/api/v1/conversions/csv-to-pdf', {
-            file_id: fileId,
+        const response = await api.post('/api/v1/convert/csv-to-pdf', {
+            document_id: fileId,
         });
         return response.data;
     },
 
     async htmlToPdf(htmlContent?: string, url?: string) {
-        const response = await api.post('/api/v1/conversions/html-to-pdf', {
+        const response = await api.post('/api/v1/convert/html-to-pdf', {
             html_content: htmlContent,
             url,
         });
@@ -232,30 +232,28 @@ export const conversionsApi = {
     },
 
     async jsonToPdf(fileId: string) {
-        const response = await api.post('/api/v1/conversions/json-to-pdf', {
-            file_id: fileId,
+        const response = await api.post('/api/v1/convert/json-to-pdf', {
+            document_id: fileId,
         });
         return response.data;
     },
 
     async pptToPdf(fileId: string) {
-        const response = await api.post('/api/v1/conversions/ppt-to-pdf', {
-            file_id: fileId,
+        const response = await api.post('/api/v1/convert/ppt-to-pdf', {
+            document_id: fileId,
         });
         return response.data;
     },
 
     async imagesToPdf(fileIds: string[]) {
-        const response = await api.post('/api/v1/conversions/images-to-pdf', {
-            file_ids: fileIds,
-        });
+        const response = await api.post('/api/v1/convert/images-to-pdf', fileIds);
         return response.data;
     },
 
     async pdfToImages(fileId: string, options?: { format?: string; dpi?: number }) {
-        const response = await api.post('/api/v1/conversions/pdf-to-images', {
-            file_id: fileId,
-            ...options,
+        const response = await api.post('/api/v1/convert/pdf-to-images', {
+            document_id: fileId,
+            options,
         });
         return response.data;
     },
@@ -263,16 +261,16 @@ export const conversionsApi = {
 
 export const editingApi = {
     async merge(fileIds: string[]) {
-        const response = await api.post('/api/v1/editing/merge', {
-            file_ids: fileIds,
+        const response = await api.post('/api/v1/edit/merge', {
+            document_ids: fileIds,
         });
         return response.data;
     },
 
     async deletePages(fileId: string, pageNumbers: number[]) {
-        const response = await api.post('/api/v1/editing/delete-pages', {
+        const response = await api.post('/api/v1/edit/delete-pages', {
             file_id: fileId,
-            page_numbers: pageNumbers,
+            pages: pageNumbers,
         });
         return response.data;
     },
@@ -283,8 +281,8 @@ export const editingApi = {
         pages?: number[],
         ranges?: string[]
     ) {
-        const response = await api.post('/api/v1/editing/split', {
-            file_id: fileId,
+        const response = await api.post('/api/v1/edit/split', {
+            document_id: fileId,
             mode,
             pages,
             ranges,
@@ -293,27 +291,40 @@ export const editingApi = {
     },
 
     async rotate(fileId: string, rotations: Record<number, number>) {
-        const response = await api.post('/api/v1/editing/rotate', {
-            file_id: fileId,
-            page_rotations: rotations,
+        const response = await api.post('/api/v1/edit/rotate', {
+            document_id: fileId,
+            rotations,
         });
         return response.data;
     },
 
     async reorder(fileId: string, pageOrder: number[]) {
-        const response = await api.post('/api/v1/editing/reorder', {
-            file_id: fileId,
-            page_order: pageOrder,
+        const response = await api.post('/api/v1/edit/reorder', {
+            document_id: fileId,
+            new_order: pageOrder,
         });
         return response.data;
     },
 
     async extractPages(fileId: string, pageNumbers: number[]) {
-        const response = await api.post('/api/v1/editing/extract-pages', {
-            file_id: fileId,
-            page_numbers: pageNumbers,
-        });
-        return response.data;
+        try {
+            const response = await api.post('/api/v1/edit/extract-pages', {
+                document_id: fileId,
+                pages: pageNumbers,
+            });
+            return response.data;
+        } catch (error: any) {
+            // Some deployments expose extract via split(mode=pages).
+            if (error?.response?.status === 404) {
+                const response = await api.post('/api/v1/edit/split', {
+                    document_id: fileId,
+                    mode: 'pages',
+                    pages: pageNumbers,
+                });
+                return response.data;
+            }
+            throw error;
+        }
     },
 };
 
@@ -356,18 +367,23 @@ export const securityApi = {
 
 export const authApi = {
     async login(username: string, password: string) {
-        const response = await api.post('/api/v1/auth/login', {
-            username,
-            password,
+        const body = new URLSearchParams();
+        body.append('username', username);
+        body.append('password', password);
+
+        const response = await api.post('/api/v1/auth/login', body.toString(), {
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
         });
         return response.data;
     },
 
-    async register(email: string, password: string, username?: string) {
+    async register(email: string, password: string, fullName?: string) {
         const response = await api.post('/api/v1/auth/register', {
             email,
             password,
-            username: username || email,
+            full_name: fullName,
         });
         return response.data;
     },
