@@ -5,7 +5,22 @@
 
 import axios, { AxiosInstance, AxiosError } from 'axios';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
+const resolveApiBaseUrl = () => {
+    if (process.env.NEXT_PUBLIC_API_URL) {
+        return process.env.NEXT_PUBLIC_API_URL;
+    }
+
+    if (typeof window !== 'undefined') {
+        const host = window.location.hostname.toLowerCase();
+        if (host === 'likespdf.vercel.app' || host.endsWith('.vercel.app')) {
+            return 'https://likes-pdf-backend-production-668e.up.railway.app';
+        }
+    }
+
+    return 'http://127.0.0.1:8000';
+};
+
+const API_BASE_URL = resolveApiBaseUrl();
 
 // Create axios instance
 const api: AxiosInstance = axios.create({
