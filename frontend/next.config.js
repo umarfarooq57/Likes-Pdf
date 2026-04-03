@@ -1,4 +1,9 @@
-/** @type {import('next').NextConfig} */
+﻿/** @type {import('next').NextConfig} */
+const isProduction = process.env.NODE_ENV === 'production';
+const backendTarget = isProduction
+    ? 'https://likes-pdf-backend-production-668e.up.railway.app'
+    : 'http://127.0.0.1:8000';
+
 const nextConfig = {
     reactStrictMode: true,
     images: {
@@ -8,7 +13,7 @@ const nextConfig = {
         return [
             {
                 source: '/api/:path*',
-                destination: 'http://127.0.0.1:8000/api/:path*',
+                destination: `${backendTarget}/api/:path*`,
             },
         ];
     },
