@@ -6,15 +6,23 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
 
 const resolveApiBaseUrl = () => {
-    if (process.env.NEXT_PUBLIC_API_URL) {
-        return process.env.NEXT_PUBLIC_API_URL;
-    }
+    const envUrl = (process.env.NEXT_PUBLIC_API_URL || '').trim();
 
     if (typeof window !== 'undefined') {
         const host = window.location.hostname.toLowerCase();
-        if (host === 'likespdf.vercel.app' || host.endsWith('.vercel.app')) {
-            return 'https://likes-pdf-backend-production-668e.up.railway.app';
+        const isVercelHost = host === 'likespdf.vercel.app' || host.endsWith('.vercel.app');
+
+        if (isVercelHost) {
+            // Never use localhost-like API URLs on a public Vercel deployment.
+            const isLocalEnvUrl = /localhost|127\.0\.0\.1|0\.0\.0\.0/i.test(envUrl);
+            if (!envUrl || isLocalEnvUrl) {
+                return 'https://likes-pdf-backend-production-668e.up.railway.app';
+            }
         }
+    }
+
+    if (envUrl) {
+        return envUrl;
     }
 
     return 'http://127.0.0.1:8000';
