@@ -398,11 +398,38 @@ export const conversionsApi = {
 
 export const editingApi = {
     merge: async (documentIds: string[], outputFilename?: string) => {
-        const response = await api.post('/api/v1/edit/merge', {
-            document_ids: documentIds,
-            output_filename: outputFilename,
-        });
-        return response.data;
+        try {
+            const response = await api.post('/api/v1/edit/merge', {
+                document_ids: documentIds,
+                output_filename: outputFilename,
+            });
+            return response.data;
+        } catch (error: any) {
+            if (error?.response?.status !== 404) {
+                throw error;
+            }
+
+            // Legacy API fallback: synchronous merge via /api/convert.
+            const [firstId, ...additionalIds] = documentIds;
+            const response = await api.post('/api/convert', {
+                file_id: firstId,
+                conversion_type: 'merge_pdf',
+                options: {
+                    additional_file_ids: additionalIds,
+                    output_filename: outputFilename,
+                },
+            });
+
+            const data = response.data || {};
+            return {
+                id: data.output_file_id || data.id,
+                status: data.status || 'completed',
+                result_url: data.download_url
+                    ? `${API_BASE_URL}${data.download_url}`
+                    : undefined,
+                _raw: data,
+            };
+        }
     },
 
     split: async (documentId: string, mode: 'pages' | 'range', pages?: number[], ranges?: string[]) => {

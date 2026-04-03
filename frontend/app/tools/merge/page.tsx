@@ -48,6 +48,15 @@ export default function MergePDFPage() {
         try {
             const documentIds = files.map((f) => f.id);
             const result = await editingApi.merge(documentIds);
+
+            // Legacy backend may return completed result_url immediately.
+            if (result.result_url) {
+                setResultUrl(result.result_url);
+                setIsProcessing(false);
+                toast.success('Merge complete!');
+                return;
+            }
+
             setConversionId(result.id);
         } catch (error) {
             toast.error('Failed to start merge process');

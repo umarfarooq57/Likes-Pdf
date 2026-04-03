@@ -46,6 +46,14 @@ class ConversionRequest(BaseModel):
     options: dict = {}
 
 
+def _resolve_upload_path(upload_dir: str, file_id: str) -> str | None:
+    """Resolve a file id to a stored upload path."""
+    matching_files = [f for f in os.listdir(upload_dir) if f.startswith(file_id)]
+    if not matching_files:
+        return None
+    return os.path.join(upload_dir, matching_files[0])
+
+
 class ConversionResponse(BaseModel):
     """Conversion response model"""
     status: str
@@ -71,21 +79,28 @@ async def convert_file(request: ConversionRequest):
 
         # Find input file
         upload_dir = os.path.join(settings.storage_path, "uploads")
-        matching_files = [
-            f for f in os.listdir(upload_dir)
-            if f.startswith(request.file_id)
-        ]
+        input_path = _resolve_upload_path(upload_dir, request.file_id)
 
-        if not matching_files:
+        if not input_path:
             raise HTTPException(status_code=404, detail="Input file not found")
 
-        input_path = os.path.join(upload_dir, matching_files[0])
+        options = dict(request.options or {})
+
+        # Legacy frontend can provide additional file ids for merge.
+        if request.conversion_type == ConversionType.MERGE_PDF:
+            additional_ids = options.get("additional_file_ids", [])
+            additional_paths = []
+            for extra_file_id in additional_ids:
+                extra_path = _resolve_upload_path(upload_dir, str(extra_file_id))
+                if extra_path:
+                    additional_paths.append(extra_path)
+            options["additional_files"] = additional_paths
 
         # Perform conversion
         result = await conversion_engine.convert(
             input_path=input_path,
             conversion_type=request.conversion_type.value,
-            options=request.options
+            options=options
         )
 
         logger.info(f"Conversion completed: {result['output_file_id']}")
