@@ -57,6 +57,26 @@ api.interceptors.request.use(
 api.interceptors.response.use(
     (response) => response,
     async (error: AxiosError) => {
+        // If request failed due to localhost connection error on a production host, retry on Railway.
+        if (typeof window !== 'undefined' && !error.response) {
+            const host = window.location.hostname.toLowerCase();
+            const isProduction = host === 'likespdf.vercel.app' || host.endsWith('.vercel.app');
+            const isLocalhostError = /127\.0\.0\.1|localhost/i.test(String(error.config?.baseURL || ''));
+
+            if (isProduction && isLocalhostError) {
+                // Override the request's base URL to Railway and retry.
+                const originalConfig = error.config;
+                if (originalConfig) {
+                    originalConfig.baseURL = RAILWAY_BACKEND_URL;
+                    try {
+                        return axios(originalConfig);
+                    } catch (retryError) {
+                        return Promise.reject(retryError);
+                    }
+                }
+            }
+        }
+
         if (error.response?.status === 401) {
             // Try to refresh token
             const refreshToken = localStorage.getItem('refresh_token');
