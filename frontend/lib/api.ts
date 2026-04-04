@@ -5,11 +5,24 @@
 
 import axios, { AxiosInstance, AxiosError } from 'axios';
 
-const extractErrorMessage = (error: any) => {
+export const extractErrorMessage = (error: any) => {
     return error?.response?.data?.detail
         || error?.response?.data?.error
         || error?.message
-        || 'Request failed';
+        || 'Something went wrong';
+};
+
+export const normalizeDownloadUrl = (url: string) => {
+    if (!url) return url;
+    if (/^https?:\/\//i.test(url)) return url;
+
+    const base = process.env.NEXT_PUBLIC_API_URL || '';
+    if (!base) return url;
+
+    if (url.startsWith('/')) {
+        return `${base}${url}`;
+    }
+    return `${base}/${url}`;
 };
 
 const resolveApiBaseUrl = () => {
@@ -41,6 +54,10 @@ const api: AxiosInstance = axios.create({
 // Request interceptor for auth token
 api.interceptors.request.use(
     (config) => {
+        if (typeof navigator !== 'undefined' && !navigator.onLine) {
+            return Promise.reject(new Error('No internet connection. Please check your network.'));
+        }
+
         const token = localStorage.getItem('access_token');
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
@@ -184,7 +201,7 @@ export const documentsApi = {
 
 export const conversionsApi = {
     async merge(fileIds: string[]) {
-        const response = await api.post('/api/v1/conversions/merge', {
+        const response = await api.post('/api/v1/edit/merge', {
             file_ids: fileIds,
         });
         return response.data;
@@ -311,52 +328,32 @@ export const conversionsApi = {
 
 export const editingApi = {
     async merge(fileIds: string[]) {
-        try {
-            const [firstFileId, ...restFileIds] = fileIds;
-            const fallback = await api.post('/api/convert', {
-                file_id: firstFileId,
-                conversion_type: 'merge_pdf',
-                options: {
-                    additional_file_ids: restFileIds,
-                },
-            });
-            const data = fallback.data || {};
-            return {
-                ...data,
-                id: data.id || data.output_file_id,
-                result_url: data.result_url || data.download_url,
-            };
-        } catch (error: any) {
-            // Newer backend exposes /api/v1/edit/merge.
-            if (error?.response?.status === 404) {
-                const response = await api.post('/api/v1/edit/merge', {
-                    document_ids: fileIds,
-                });
-                return response.data;
-            }
-            throw error;
-        }
+        const response = await api.post('/api/v1/edit/merge', {
+            document_ids: fileIds,
+        });
+        return response.data;
     },
 
     async deletePages(fileId: string, pageNumbers: number[]) {
         const response = await api.post('/api/v1/edit/delete-pages', {
-            file_id: fileId,
+            document_id: fileId,
             pages: pageNumbers,
         });
         return response.data;
     },
 
-    async split(
-        fileId: string,
-        mode: 'pages' | 'range',
-        pages?: number[],
-        ranges?: string[]
-    ) {
+    async split(payload: { file: string; pages?: number[]; ranges?: string }) {
+        const hasRanges = !!payload.ranges?.trim();
         const response = await api.post('/api/v1/edit/split', {
-            document_id: fileId,
-            mode,
-            pages,
-            ranges,
+            document_id: payload.file,
+            mode: hasRanges ? 'range' : 'pages',
+            pages: payload.pages,
+            ranges: hasRanges
+                ? payload.ranges!
+                    .split(',')
+                    .map((r) => r.trim())
+                    .filter(Boolean)
+                : undefined,
         });
         return response.data;
     },
@@ -401,36 +398,54 @@ export const editingApi = {
 
 export const optimizationApi = {
     async compress(fileId: string, quality?: string) {
-        const response = await api.post('/api/v1/optimization/compress', {
-            file_id: fileId,
-            quality: quality || 'medium',
-        });
-        return response.data;
+        const selectedQuality = quality || 'medium';
+
+        try {
+            // Modern backend route
+            const response = await api.post('/api/v1/optimization/compress', {
+                document_id: fileId,
+                quality: selectedQuality,
+            });
+            return response.data;
+        } catch (error: any) {
+            // Legacy backend route used by some production deployments
+            if (error?.response?.status === 404) {
+                const response = await api.post('/api/v1/convert', {
+                    file_id: fileId,
+                    conversion_type: 'compress_pdf',
+                    options: {
+                        quality: selectedQuality,
+                    },
+                });
+                return response.data;
+            }
+            throw error;
+        }
     },
 };
 
 export const securityApi = {
     async addPassword(fileId: string, password: string) {
-        const response = await api.post('/api/v1/security/add-password', {
-            file_id: fileId,
-            password,
+        const response = await api.post('/api/v1/security/protect', {
+            document_id: fileId,
+            user_password: password,
         });
         return response.data;
     },
 
     async removePassword(fileId: string, password: string) {
-        const response = await api.post('/api/v1/security/remove-password', {
-            file_id: fileId,
+        const response = await api.post('/api/v1/security/unlock', {
+            document_id: fileId,
             password,
         });
         return response.data;
     },
 
     async getThumbnails(fileId: string, pages: 'all' | number[] = 'all', width = 150) {
-        const response = await api.post('/api/v1/security/thumbnails', {
-            file_id: fileId,
-            pages,
-            width,
+        const response = await api.get(`/api/v1/security/thumbnails/${fileId}`, {
+            params: {
+                width,
+            },
         });
         return response.data;
     },

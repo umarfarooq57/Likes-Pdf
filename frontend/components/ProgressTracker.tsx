@@ -6,6 +6,13 @@ import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
 
 const API_V1_BASE_URL = '/api/v1';
 
+const getStatusEndpoints = (conversionId: string) => [
+    // Current backend route
+    `${API_V1_BASE_URL}/jobs/${conversionId}/status`,
+    // Legacy fallback route used by older deployments
+    `${API_V1_BASE_URL}/convert/${conversionId}/status`,
+];
+
 interface ProgressTrackerProps {
     conversionId: string;
     onComplete?: (resultUrl: string) => void;
@@ -34,15 +41,34 @@ export default function ProgressTracker({
 
         const pollStatus = async () => {
             try {
-                const response = await fetch(`${API_V1_BASE_URL}/convert/${conversionId}/status`);
-                if (!response.ok) {
-                    let message = `Status check failed (${response.status})`;
+                let response: Response | null = null;
+                let lastErrorMessage = '';
+
+                for (const endpoint of getStatusEndpoints(conversionId)) {
+                    response = await fetch(endpoint);
+                    if (response.ok) {
+                        break;
+                    }
+
+                    let detail = '';
                     try {
                         const payload = await response.json();
-                        message = payload?.detail || payload?.error || message;
+                        detail = payload?.detail || payload?.error || '';
                     } catch {
-                        // Keep fallback message
+                        // Ignore JSON parsing failures for fallback logic.
                     }
+
+                    lastErrorMessage = detail || `Status check failed (${response.status})`;
+
+                    // Stop fallback for non-404 errors or meaningful 404s (e.g. job id not found).
+                    if (response.status !== 404 || (detail && detail !== 'Not Found')) {
+                        break;
+                    }
+                }
+
+                if (!response || !response.ok) {
+                    const statusCode = response?.status ?? 'unknown';
+                    const message = lastErrorMessage || `Status check failed (${statusCode})`;
                     throw new Error(message);
                 }
 

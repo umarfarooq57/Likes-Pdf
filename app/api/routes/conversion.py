@@ -55,9 +55,16 @@ class V1ConversionRequest(BaseModel):
     url: str | None = None
 
 
+class V1CompressRequest(BaseModel):
+    """Compatibility request model for optimization/compress endpoint."""
+    document_id: str
+    quality: str = "medium"
+
+
 def _resolve_upload_path(upload_dir: str, file_id: str) -> str | None:
     """Resolve a file id to a stored upload path."""
-    matching_files = [f for f in os.listdir(upload_dir) if f.startswith(file_id)]
+    matching_files = [f for f in os.listdir(
+        upload_dir) if f.startswith(file_id)]
     if not matching_files:
         return None
     return os.path.join(upload_dir, matching_files[0])
@@ -96,7 +103,8 @@ async def convert_file(request: ConversionRequest):
         Conversion response with output file details
     """
     try:
-        logger.info(f"Conversion requested: {request.conversion_type} for file {request.file_id}")
+        logger.info(
+            f"Conversion requested: {request.conversion_type} for file {request.file_id}")
 
         # Find input file
         upload_dir = os.path.join(settings.storage_path, "uploads")
@@ -112,7 +120,8 @@ async def convert_file(request: ConversionRequest):
             additional_ids = options.get("additional_file_ids", [])
             additional_paths = []
             for extra_file_id in additional_ids:
-                extra_path = _resolve_upload_path(upload_dir, str(extra_file_id))
+                extra_path = _resolve_upload_path(
+                    upload_dir, str(extra_file_id))
                 if extra_path:
                     additional_paths.append(extra_path)
             options["additional_files"] = additional_paths
@@ -132,7 +141,8 @@ async def convert_file(request: ConversionRequest):
         raise
     except Exception as e:
         logger.error(f"Conversion error: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Conversion failed: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Conversion failed: {str(e)}")
 
 
 @router.post("/convert/{tool_name}")
@@ -140,15 +150,18 @@ async def convert_v1(tool_name: str, request: V1ConversionRequest):
     """Frontend compatibility endpoint for /api/v1/convert/* routes."""
     conversion_type = V1_TO_LEGACY_CONVERSION.get(tool_name)
     if not conversion_type:
-        raise HTTPException(status_code=404, detail="Unsupported conversion endpoint")
+        raise HTTPException(
+            status_code=404, detail="Unsupported conversion endpoint")
 
     # html-to-pdf in root app expects an uploaded html file; v1 frontend may send html/url directly.
     if tool_name == "html-to-pdf" and not request.document_id:
         if not request.html_content and not request.url:
-            raise HTTPException(status_code=400, detail="Provide document_id or html_content/url")
+            raise HTTPException(
+                status_code=400, detail="Provide document_id or html_content/url")
 
         if request.url:
-            raise HTTPException(status_code=400, detail="URL HTML conversion is not supported on this deployment")
+            raise HTTPException(
+                status_code=400, detail="URL HTML conversion is not supported on this deployment")
 
         upload_dir = os.path.join(settings.storage_path, "uploads")
         os.makedirs(upload_dir, exist_ok=True)
@@ -176,6 +189,27 @@ async def convert_v1(tool_name: str, request: V1ConversionRequest):
         "status": "completed",
         "progress": 100,
         "result_url": f"/api/v1/convert/{result.output_file_id}/download",
+        "result_filename": result.output_filename,
+    }
+
+
+@router.post("/optimization/compress")
+async def compress_v1(request: V1CompressRequest):
+    """Compatibility endpoint for frontend calls to /api/v1/optimization/compress."""
+    result = await convert_file(
+        ConversionRequest(
+            file_id=request.document_id,
+            conversion_type=ConversionType.COMPRESS_PDF,
+            options={"quality": request.quality or "medium"},
+        )
+    )
+
+    return {
+        "id": result.output_file_id,
+        "status": "completed",
+        "progress": 100,
+        "result_url": f"/api/v1/convert/{result.output_file_id}/download",
+        "download_url": result.download_url,
         "result_filename": result.output_filename,
     }
 
