@@ -4,30 +4,30 @@ import { ArrowLeft, CheckCircle2, FileText, UploadCloud, Settings2, Loader2, Dow
 
 const steps = [
     {
-        title: 'Step 1: Word File Upload Karein',
+        title: 'Step 1: Upload Your Word File',
         description:
-            'Word to PDF tool open karein, phir Upload File button se .doc ya .docx file select karein.',
+            'Open the Word to PDF tool, then use the Upload File button to select a .doc or .docx file.',
         image: '/demo/steps/step-1-upload-word.svg',
         icon: UploadCloud,
     },
     {
-        title: 'Step 2: Convert to PDF Start Karein',
+        title: 'Step 2: Start the Conversion',
         description:
-            'File select hone ke baad Convert to PDF button click karein. Engine conversion process start karega.',
+            'After selecting your file, click Convert to PDF to begin processing.',
         image: '/demo/steps/step-2-start-conversion.svg',
         icon: Settings2,
     },
     {
-        title: 'Step 3: Processing Status Check Karein',
+        title: 'Step 3: Monitor Processing Status',
         description:
-            'Thori dair wait karein jab tak status completed na ho jaye. Bara document ho to zyada time lag sakta hai.',
+            'Wait until the status changes to Completed. Larger documents may take longer to process.',
         image: '/demo/steps/step-3-processing.svg',
         icon: Loader2,
     },
     {
-        title: 'Step 4: Final PDF Download Karein',
+        title: 'Step 4: Download the Final PDF',
         description:
-            'Conversion complete hone par Download PDF button dikhai dega. Us par click karke final PDF save karein.',
+            'Once conversion is complete, click Download PDF to save the final file.',
         image: '/demo/steps/step-4-download-pdf.svg',
         icon: Download,
     },
@@ -51,7 +51,7 @@ export default function WordToPdfGuidePage() {
                         </div>
                         <div>
                             <h1 className="text-3xl md:text-4xl font-bold text-slate-900">Word to PDF Complete Guide</h1>
-                            <p className="text-slate-600 mt-1">Is page par complete tareeqa images ke sath diya gaya hai.</p>
+                            <p className="text-slate-600 mt-1">This page walks you through the full process with visual examples.</p>
                         </div>
                     </div>
 
@@ -82,9 +82,9 @@ export default function WordToPdfGuidePage() {
                             <div>
                                 <h3 className="text-emerald-900 font-semibold">Quick Tips</h3>
                                 <ul className="text-sm text-emerald-800 mt-2 space-y-1">
-                                    <li>Best result ke liye editable .docx file use karein.</li>
-                                    <li>File upload ke baad browser tab close na karein jab tak conversion complete na ho.</li>
-                                    <li>Agar conversion fail ho to file dubara upload karke retry karein.</li>
+                                    <li>For best results, use an editable .docx file.</li>
+                                    <li>Keep the browser tab open until the conversion is complete.</li>
+                                    <li>If conversion fails, upload the file again and retry.</li>
                                 </ul>
                             </div>
                         </div>

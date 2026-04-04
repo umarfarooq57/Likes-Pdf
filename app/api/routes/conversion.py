@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from enum import Enum
 import os
 import logging
+import tempfile
 
 from app.config import settings
 from app.core.conversion.engine import ConversionEngine
@@ -46,6 +47,14 @@ class ConversionRequest(BaseModel):
     options: dict = {}
 
 
+class V1ConversionRequest(BaseModel):
+    """Compatibility request model used by frontend /api/v1 endpoints."""
+    document_id: str | None = None
+    options: dict = {}
+    html_content: str | None = None
+    url: str | None = None
+
+
 def _resolve_upload_path(upload_dir: str, file_id: str) -> str | None:
     """Resolve a file id to a stored upload path."""
     matching_files = [f for f in os.listdir(upload_dir) if f.startswith(file_id)]
@@ -61,6 +70,18 @@ class ConversionResponse(BaseModel):
     output_filename: str
     download_url: str
     processing_time_seconds: float
+
+
+V1_TO_LEGACY_CONVERSION = {
+    "pdf-to-text": ConversionType.EXTRACT_TEXT,
+    "pdf-to-word": ConversionType.PDF_TO_WORD,
+    "pdf-to-excel": ConversionType.PDF_TO_EXCEL,
+    "pdf-to-images": ConversionType.PDF_TO_IMAGES,
+    "word-to-pdf": ConversionType.OFFICE_TO_PDF,
+    "excel-to-pdf": ConversionType.OFFICE_TO_PDF,
+    "ppt-to-pdf": ConversionType.OFFICE_TO_PDF,
+    "html-to-pdf": ConversionType.HTML_TO_PDF,
+}
 
 
 @router.post("/convert", response_model=ConversionResponse)
@@ -112,6 +133,63 @@ async def convert_file(request: ConversionRequest):
     except Exception as e:
         logger.error(f"Conversion error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Conversion failed: {str(e)}")
+
+
+@router.post("/convert/{tool_name}")
+async def convert_v1(tool_name: str, request: V1ConversionRequest):
+    """Frontend compatibility endpoint for /api/v1/convert/* routes."""
+    conversion_type = V1_TO_LEGACY_CONVERSION.get(tool_name)
+    if not conversion_type:
+        raise HTTPException(status_code=404, detail="Unsupported conversion endpoint")
+
+    # html-to-pdf in root app expects an uploaded html file; v1 frontend may send html/url directly.
+    if tool_name == "html-to-pdf" and not request.document_id:
+        if not request.html_content and not request.url:
+            raise HTTPException(status_code=400, detail="Provide document_id or html_content/url")
+
+        if request.url:
+            raise HTTPException(status_code=400, detail="URL HTML conversion is not supported on this deployment")
+
+        upload_dir = os.path.join(settings.storage_path, "uploads")
+        os.makedirs(upload_dir, exist_ok=True)
+        temp_file_id = next(tempfile._get_candidate_names())
+        temp_file_path = os.path.join(upload_dir, f"{temp_file_id}.html")
+        with open(temp_file_path, "w", encoding="utf-8") as fh:
+            fh.write(request.html_content or "")
+        document_id = temp_file_id
+    else:
+        document_id = request.document_id
+
+    if not document_id:
+        raise HTTPException(status_code=400, detail="document_id is required")
+
+    result = await convert_file(
+        ConversionRequest(
+            file_id=document_id,
+            conversion_type=conversion_type,
+            options=request.options or {},
+        )
+    )
+
+    return {
+        "id": result.output_file_id,
+        "status": "completed",
+        "progress": 100,
+        "result_url": f"/api/v1/convert/{result.output_file_id}/download",
+        "result_filename": result.output_filename,
+    }
+
+
+@router.get("/convert/{conversion_id}/status")
+async def conversion_status_v1(conversion_id: str):
+    """Compatibility status endpoint for legacy synchronous conversions."""
+    return {
+        "id": conversion_id,
+        "status": "completed",
+        "progress": 100,
+        "current_step": "Done",
+        "result_url": f"/api/v1/convert/{conversion_id}/download",
+    }
 
 
 @router.get("/conversions/supported")

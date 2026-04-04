@@ -14,6 +14,7 @@ interface PageItem {
 }
 
 export default function ReorderPage() {
+    const publicApiBase = process.env.NEXT_PUBLIC_API_URL || '';
     const [documentId, setDocumentId] = useState<string | null>(null);
     const [fileName, setFileName] = useState<string>('');
     const [pages, setPages] = useState<PageItem[]>([]);
@@ -108,7 +109,7 @@ export default function ReorderPage() {
         try {
             const newOrder = pages.map(p => p.pageNumber);
             const result = await editingApi.reorder(documentId, newOrder);
-            setResultUrl(`http://localhost:8000/api/v1/convert/${result.id}/download`);
+            setResultUrl(`${publicApiBase}/api/v1/convert/${result.id}/download`);
             toast.success('Pages reordered successfully!');
         } catch (error) {
             toast.error('Failed to reorder pages');

@@ -35,6 +35,17 @@ export default function ProgressTracker({
         const pollStatus = async () => {
             try {
                 const response = await fetch(`${API_V1_BASE_URL}/convert/${conversionId}/status`);
+                if (!response.ok) {
+                    let message = `Status check failed (${response.status})`;
+                    try {
+                        const payload = await response.json();
+                        message = payload?.detail || payload?.error || message;
+                    } catch {
+                        // Keep fallback message
+                    }
+                    throw new Error(message);
+                }
+
                 const data: ConversionStatus = await response.json();
                 setStatus(data);
 
@@ -50,7 +61,12 @@ export default function ProgressTracker({
                     }
                 }
             } catch (error) {
+                const message = (error as any)?.message || 'Failed to poll conversion status';
                 console.error('Failed to poll status:', error);
+                if (onError) {
+                    onError(message);
+                }
+                setPolling(false);
             }
         };
 

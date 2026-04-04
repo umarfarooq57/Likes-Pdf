@@ -15,6 +15,7 @@ interface BookmarkItem {
 }
 
 export default function BookmarksPDFPage() {
+    const publicApiBase = process.env.NEXT_PUBLIC_API_URL || '';
     const [documentId, setDocumentId] = useState<string | null>(null);
     const [fileName, setFileName] = useState<string>('');
     const [isProcessing, setIsProcessing] = useState(false);
@@ -77,7 +78,7 @@ export default function BookmarksPDFPage() {
 
         try {
             await new Promise(resolve => setTimeout(resolve, 2000));
-            setResultUrl(`http://localhost:8000/api/v1/documents/${documentId}/download`);
+            setResultUrl(`${publicApiBase}/api/v1/documents/${documentId}/download`);
             toast.success('Bookmarks added successfully!');
         } catch (error) {
             toast.error('Failed to add bookmarks');

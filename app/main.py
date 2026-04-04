@@ -89,6 +89,9 @@ app.include_router(health.router, tags=["Health"])
 app.include_router(upload.router, prefix="/api", tags=["Upload"])
 app.include_router(conversion.router, prefix="/api", tags=["Conversion"])
 app.include_router(download.router, prefix="/api", tags=["Download"])
+app.include_router(upload.router, prefix="/api/v1", tags=["Upload v1"])
+app.include_router(conversion.router, prefix="/api/v1", tags=["Conversion v1"])
+app.include_router(download.router, prefix="/api/v1", tags=["Download v1"])
 
 
 # Root endpoint

@@ -12,6 +12,12 @@ router = APIRouter()
 
 
 @router.get("/health")
+async def health_ping():
+    """Lightweight endpoint for uptime checks."""
+    return {"status": "ok"}
+
+
+@router.get("/health/details")
 async def health_check():
     """
     Health check endpoint

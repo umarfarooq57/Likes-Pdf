@@ -6,10 +6,12 @@ import os
 import time
 import uuid
 import logging
+import mimetypes
 from importlib import import_module
 from typing import Dict, Any
 
 from app.config import settings
+from app.core import result_store
 
 logger = logging.getLogger(__name__)
 
@@ -162,6 +164,24 @@ class ConversionEngine:
             
             # Get output filename
             output_filename = os.path.basename(output_path)
+
+            # Keep result in memory so downloads survive ephemeral FS cleanup windows.
+            with open(output_path, "rb") as fh:
+                payload = fh.read()
+
+            content_type = mimetypes.guess_type(output_filename)[0] or "application/octet-stream"
+            result_store.put(
+                output_file_id,
+                payload,
+                output_filename,
+                content_type=content_type,
+                ttl_seconds=settings.file_retention_hours * 3600,
+            )
+
+            try:
+                os.remove(output_path)
+            except OSError:
+                pass
             
             logger.info(f"Conversion completed in {processing_time:.2f}s: {output_filename}")
             

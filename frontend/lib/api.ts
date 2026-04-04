@@ -5,6 +5,13 @@
 
 import axios, { AxiosInstance, AxiosError } from 'axios';
 
+const extractErrorMessage = (error: any) => {
+    return error?.response?.data?.detail
+        || error?.response?.data?.error
+        || error?.message
+        || 'Request failed';
+};
+
 const resolveApiBaseUrl = () => {
     if (typeof window !== 'undefined') {
         const host = window.location.hostname.toLowerCase();
@@ -125,6 +132,25 @@ export const documentsApi = {
         };
     },
 
+    async uploadBatch(files: File[], onProgress?: (progress: number) => void) {
+        const formData = new FormData();
+        files.forEach((file) => formData.append('files', file));
+
+        const response = await api.post('/api/upload/batch', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+            onUploadProgress: (progressEvent) => {
+                if (onProgress && progressEvent.total) {
+                    const progress = Math.round((progressEvent.loaded / progressEvent.total) * 100);
+                    onProgress(progress);
+                }
+            },
+        });
+
+        return response.data;
+    },
+
     async list(page = 1, pageSize = 20) {
         const response = await api.get('/api/v1/documents', {
             params: {
@@ -165,24 +191,36 @@ export const conversionsApi = {
     },
 
     async pdfToText(fileId: string) {
-        const response = await api.post('/api/v1/convert/pdf-to-text', {
-            document_id: fileId,
-        });
-        return response.data;
+        try {
+            const response = await api.post('/api/v1/convert/pdf-to-text', {
+                document_id: fileId,
+            });
+            return response.data;
+        } catch (error: any) {
+            throw new Error(extractErrorMessage(error));
+        }
     },
 
     async pdfToWord(fileId: string) {
-        const response = await api.post('/api/v1/convert/pdf-to-word', {
-            document_id: fileId,
-        });
-        return response.data;
+        try {
+            const response = await api.post('/api/v1/convert/pdf-to-word', {
+                document_id: fileId,
+            });
+            return response.data;
+        } catch (error: any) {
+            throw new Error(extractErrorMessage(error));
+        }
     },
 
     async pdfToExcel(fileId: string) {
-        const response = await api.post('/api/v1/convert/pdf-to-excel', {
-            document_id: fileId,
-        });
-        return response.data;
+        try {
+            const response = await api.post('/api/v1/convert/pdf-to-excel', {
+                document_id: fileId,
+            });
+            return response.data;
+        } catch (error: any) {
+            throw new Error(extractErrorMessage(error));
+        }
     },
 
     async pdfToCsv(fileId: string) {
@@ -207,10 +245,14 @@ export const conversionsApi = {
     },
 
     async wordToPdf(fileId: string) {
-        const response = await api.post('/api/v1/convert/word-to-pdf', {
-            document_id: fileId,
-        });
-        return response.data;
+        try {
+            const response = await api.post('/api/v1/convert/word-to-pdf', {
+                document_id: fileId,
+            });
+            return response.data;
+        } catch (error: any) {
+            throw new Error(extractErrorMessage(error));
+        }
     },
 
     async excelToPdf(fileId: string) {
@@ -255,11 +297,15 @@ export const conversionsApi = {
     },
 
     async pdfToImages(fileId: string, options?: { format?: string; dpi?: number }) {
-        const response = await api.post('/api/v1/convert/pdf-to-images', {
-            document_id: fileId,
-            options,
-        });
-        return response.data;
+        try {
+            const response = await api.post('/api/v1/convert/pdf-to-images', {
+                document_id: fileId,
+                options,
+            });
+            return response.data;
+        } catch (error: any) {
+            throw new Error(extractErrorMessage(error));
+        }
     },
 };
 

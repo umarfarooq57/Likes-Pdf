@@ -44,7 +44,8 @@ class Settings(BaseSettings):
     log_format: str = Field(default="json", alias="LOG_FORMAT")
 
     # Worker (Phase 1+)
-    worker_concurrency: int = Field(default=1, alias="WORKER_CONCURRENCY")
+    worker_concurrency: int = Field(default=2, alias="WORKER_CONCURRENCY")
+    max_workers: int = Field(default=2, alias="MAX_WORKERS")
     max_jobs_per_worker: int = Field(default=50, alias="MAX_JOBS_PER_WORKER")
 
     # Security
@@ -53,10 +54,10 @@ class Settings(BaseSettings):
 
     # Feature Flags
     enable_async_processing: bool = Field(
-        default=False, alias="ENABLE_ASYNC_PROCESSING")
+        default=True, alias="ENABLE_ASYNC_PROCESSING")
     enable_ocr: bool = Field(default=False, alias="ENABLE_OCR")
     enable_batch_processing: bool = Field(
-        default=False, alias="ENABLE_BATCH_PROCESSING")
+        default=True, alias="ENABLE_BATCH_PROCESSING")
 
     # Pydantic v2 configuration: use `model_config` to control env loading
     model_config = {

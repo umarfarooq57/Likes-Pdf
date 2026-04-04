@@ -66,7 +66,7 @@ export default function FileDropzone({
     uploadImmediately = false,
 }: FileDropzoneProps) {
     const [files, setFiles] = useState<UploadedFile[]>([]);
-    
+
     // Determine accept value - prefer accept prop, then convert acceptedTypes, fallback to default
     const finalAccept = accept || (acceptedTypes ? convertAcceptedTypes(acceptedTypes) : defaultAccept);
 
@@ -88,9 +88,11 @@ export default function FileDropzone({
 
             // Upload immediately if enabled
             if (uploadImmediately) {
-                newFiles.forEach((uploadedFile) => {
-                    uploadFile(uploadedFile);
-                });
+                if (newFiles.length > 1) {
+                    uploadFilesBatch(newFiles);
+                } else {
+                    uploadFile(newFiles[0]);
+                }
             }
         },
         [onFilesSelected, uploadImmediately]
@@ -130,6 +132,65 @@ export default function FileDropzone({
                             ...f,
                             status: 'error',
                             error: error.response?.data?.detail || 'Upload failed'
+                        }
+                        : f
+                )
+            );
+        }
+    };
+
+    const uploadFilesBatch = async (uploadedFiles: UploadedFile[]) => {
+        try {
+            const filesToUpload = uploadedFiles.map((item) => item.file);
+            const response = await documentsApi.uploadBatch(filesToUpload, (progress) => {
+                setFiles((prev) =>
+                    prev.map((f) =>
+                        uploadedFiles.some((u) => u.id === f.id)
+                            ? { ...f, progress }
+                            : f
+                    )
+                );
+            });
+
+            const uploaded = Array.isArray(response?.files) ? response.files : [];
+
+            setFiles((prev) =>
+                prev.map((f) => {
+                    const fileIndex = uploadedFiles.findIndex((u) => u.id === f.id);
+                    if (fileIndex === -1) {
+                        return f;
+                    }
+
+                    const result = uploaded[fileIndex] || {};
+                    const id = result.id || result.file_id || result.fileId;
+                    if (result.error || !id) {
+                        return {
+                            ...f,
+                            status: 'error',
+                            error: result.error || 'Upload failed',
+                        };
+                    }
+
+                    if (onFileUploaded) {
+                        onFileUploaded(String(id), f.file);
+                    }
+
+                    return {
+                        ...f,
+                        status: 'completed',
+                        progress: 100,
+                        documentId: String(id),
+                    };
+                })
+            );
+        } catch (error: any) {
+            setFiles((prev) =>
+                prev.map((f) =>
+                    uploadedFiles.some((u) => u.id === f.id)
+                        ? {
+                            ...f,
+                            status: 'error',
+                            error: error.response?.data?.detail || 'Batch upload failed',
                         }
                         : f
                 )

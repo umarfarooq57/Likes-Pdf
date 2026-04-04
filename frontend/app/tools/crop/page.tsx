@@ -14,6 +14,7 @@ const presets = [
 ];
 
 export default function CropPDFPage() {
+    const publicApiBase = process.env.NEXT_PUBLIC_API_URL || '';
     const [documentId, setDocumentId] = useState<string | null>(null);
     const [fileName, setFileName] = useState<string>('');
     const [isProcessing, setIsProcessing] = useState(false);
@@ -55,7 +56,7 @@ export default function CropPDFPage() {
         try {
             // In real implementation, would call backend crop API
             await new Promise(resolve => setTimeout(resolve, 2000));
-            setResultUrl(`http://localhost:8000/api/v1/documents/${documentId}/download`);
+            setResultUrl(`${publicApiBase}/api/v1/documents/${documentId}/download`);
             toast.success('PDF cropped successfully!');
         } catch (error) {
             toast.error('Failed to crop PDF');
@@ -148,8 +149,8 @@ export default function CropPDFPage() {
                                                     key={preset.name}
                                                     onClick={() => handlePresetChange(preset.name)}
                                                     className={`px-4 py-2 rounded-lg border text-sm font-medium transition-all ${selectedPreset === preset.name
-                                                            ? 'border-yellow-500 bg-yellow-50 text-yellow-700'
-                                                            : 'border-gray-200 hover:border-gray-300'
+                                                        ? 'border-yellow-500 bg-yellow-50 text-yellow-700'
+                                                        : 'border-gray-200 hover:border-gray-300'
                                                         }`}
                                                 >
                                                     {preset.name}

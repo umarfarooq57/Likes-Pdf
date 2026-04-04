@@ -6,6 +6,9 @@ from fastapi import APIRouter, UploadFile, File, HTTPException
 from fastapi.responses import JSONResponse
 import os
 import uuid
+from typing import List
+import io
+import zipfile
 try:
     import magic
 except Exception:
@@ -16,6 +19,7 @@ from datetime import datetime
 import logging
 
 from app.config import settings, get_max_upload_size_bytes
+from app.core import result_store
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -130,3 +134,80 @@ async def upload_file(file: UploadFile = File(...)):
     except Exception as e:
         logger.error(f"Upload error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+
+
+@router.post("/documents/upload")
+async def upload_file_documents(file: UploadFile = File(...)):
+    """Compatibility endpoint for /api/v1/documents/upload."""
+    return await upload_file(file)
+
+
+@router.get("/documents")
+async def list_documents(page: int = 1, page_size: int = 20):
+    """Compatibility endpoint for frontend dashboard list API."""
+    return {
+        "documents": [],
+        "total": 0,
+        "page": page,
+        "page_size": page_size,
+    }
+
+
+@router.post("/upload/batch")
+async def upload_files_batch(files: List[UploadFile] = File(...)):
+    """Upload multiple files in one request."""
+    if not files:
+        raise HTTPException(status_code=400, detail="No files provided")
+
+    results = []
+    successful = []
+    for file in files:
+        try:
+            result = await upload_file(file)
+            results.append(result)
+            if isinstance(result, dict) and result.get("file_id"):
+                successful.append(result)
+        except HTTPException as exc:
+            results.append({
+                "filename": file.filename,
+                "error": exc.detail,
+            })
+        except Exception as exc:
+            results.append({
+                "filename": file.filename,
+                "error": str(exc),
+            })
+
+    batch_download_url = None
+    if len(successful) > 1:
+        upload_dir = os.path.join(settings.storage_path, "uploads")
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+            for item in successful:
+                file_id = item.get("file_id")
+                if not file_id:
+                    continue
+                matches = [name for name in os.listdir(upload_dir) if name.startswith(file_id)]
+                if not matches:
+                    continue
+                full_path = os.path.join(upload_dir, matches[0])
+                if os.path.exists(full_path):
+                    zf.write(full_path, arcname=matches[0])
+
+        zip_payload = zip_buffer.getvalue()
+        if zip_payload:
+            batch_file_id = str(uuid.uuid4())
+            result_store.put(
+                batch_file_id,
+                zip_payload,
+                filename=f"batch_upload_{batch_file_id}.zip",
+                content_type="application/zip",
+                ttl_seconds=settings.file_retention_hours * 3600,
+            )
+            batch_download_url = f"/api/download/{batch_file_id}"
+
+    return {
+        "count": len(results),
+        "files": results,
+        "batch_download_url": batch_download_url,
+    }
