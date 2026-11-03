@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" fill="none">
+  <rect width="1280" height="720" fill="#111827"/>
+  <rect x="80" y="80" width="1120" height="560" rx="24" fill="#0F172A" stroke="#334155" stroke-width="2"/>
+  <text x="120" y="170" fill="#E2E8F0" font-size="44" font-family="Arial, sans-serif" font-weight="700">Step 4: Download PDF</text>
+  <rect x="120" y="230" width="1040" height="300" rx="20" fill="#1E293B" stroke="#475569" stroke-width="2"/>
+  <text x="170" y="320" fill="#86EFAC" font-size="34" font-family="Arial, sans-serif">Conversion completed successfully</text>
+  <text x="170" y="380" fill="#F8FAFC" font-size="30" font-family="Arial, sans-serif">Click Download PDF to save your final file</text>
+  <rect x="170" y="430" width="360" height="68" rx="12" fill="#059669"/>
+  <text x="220" y="474" fill="#FFFFFF" font-size="28" font-family="Arial, sans-serif" font-weight="700">Download PDF</text>
+</svg>

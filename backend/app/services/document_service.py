@@ -1,0 +1,232 @@
+"""
+Document Service
+Business logic for document operations
+"""
+
+import os
+import uuid
+import aiofiles
+from pathlib import Path
+from typing import Optional, List, Tuple
+from uuid import UUID
+from datetime import datetime, timezone, timedelta
+from fastapi import UploadFile
+from sqlalchemy import select, func
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.config import settings
+from app.models.document import Document, DocumentStatus
+
+
+class DocumentService:
+    """Service for document operations"""
+
+    def __init__(self, db: AsyncSession):
+        self.db = db
+
+    async def upload_file(
+        self,
+        file: UploadFile,
+        user_id: Optional[UUID] = None
+    ) -> Document:
+        """Upload and save a file with proper validation"""
+
+        # --- Filename sanity ---
+        if not file.filename:
+            raise ValueError("Filename is required")
+
+        # Prevent path traversal attacks
+        safe_name = Path(file.filename).name
+        if not safe_name or safe_name.startswith('.'):
+            raise ValueError("Invalid filename")
+
+        # --- Extension whitelist ---
+        file_ext = Path(safe_name).suffix.lower()
+        allowed_exts = {
+            ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
+            ".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".tiff",
+            ".html", ".htm", ".md", ".txt", ".csv", ".xml", ".json",
+        }
+        if file_ext not in allowed_exts:
+            raise ValueError(
+                f"File type '{file_ext}' is not allowed. "
+                f"Accepted formats: PDF, Word, Excel, PowerPoint, Images, HTML, TXT, CSV, JSON, XML."
+            )
+
+        # --- MIME type check (first 512 bytes sniffing) ---
+        ALLOWED_MIME_PREFIXES = (
+            "application/pdf",
+            "application/msword",
+            "application/vnd.openxmlformats",
+            "application/vnd.ms-",
+            "application/vnd.oasis",
+            "image/",
+            "text/",
+            "application/json",
+            "application/xml",
+        )
+        header_bytes = await file.read(512)
+        await file.seek(0)
+
+        import mimetypes as _mimetypes
+        guessed_mime, _ = _mimetypes.guess_type(safe_name)
+        content_type = file.content_type or guessed_mime or "application/octet-stream"
+
+        if not any(content_type.startswith(p) for p in ALLOWED_MIME_PREFIXES):
+            raise ValueError(
+                f"Invalid file content type: '{content_type}'. "
+                "Only document and image files are allowed."
+            )
+
+        # --- Generate unique storage key ---
+        storage_key = f"{uuid.uuid4()}{file_ext}"
+        storage_path = settings.UPLOAD_DIR / storage_key
+
+        # --- Save file to disk with size enforcement ---
+        max_size = settings.MAX_UPLOAD_SIZE  # 100MB default
+        file_size = 0
+        async with aiofiles.open(storage_path, 'wb') as f:
+            while chunk := await file.read(1024 * 1024):  # 1MB chunks
+                file_size += len(chunk)
+                if file_size > max_size:
+                    # Remove partial file
+                    storage_path.unlink(missing_ok=True)
+                    raise ValueError(
+                        f"File too large. Maximum allowed size is "
+                        f"{max_size // (1024 * 1024)}MB."
+                    )
+                await f.write(chunk)
+
+        # --- Create document record ---
+        document = Document(
+            user_id=user_id,
+            original_name=safe_name,
+            storage_key=storage_key,
+            mime_type=content_type,
+            file_size=file_size,
+            file_extension=file_ext.lstrip('.'),
+            status=DocumentStatus.UPLOADED,
+            is_temp=user_id is None,
+            expires_at=datetime.utcnow() + timedelta(hours=24) if user_id is None else None,
+        )
+
+        self.db.add(document)
+        await self.db.commit()
+        await self.db.refresh(document)
+
+        return document
+
+    async def create_from_processed(
+        self,
+        original_name: str,
+        storage_key: str,
+        mime_type: str,
+        file_size: int,
+        user_id: Optional[UUID] = None,
+    ) -> Document:
+        """Create a document record for a file already written to processed storage."""
+        file_ext = Path(original_name).suffix.lower().lstrip('.')
+
+        document = Document(
+            user_id=user_id,
+            original_name=original_name,
+            storage_key=storage_key,
+            mime_type=mime_type or "application/octet-stream",
+            file_size=file_size,
+            file_extension=file_ext,
+            status=DocumentStatus.READY,
+            is_temp=user_id is None,
+            expires_at=datetime.utcnow() + timedelta(hours=24) if user_id is None else None,
+        )
+
+        self.db.add(document)
+        await self.db.commit()
+        await self.db.refresh(document)
+        return document
+
+    async def get_by_id(self, document_id) -> Optional[Document]:
+        """Get document by ID"""
+        # Convert UUID to string if needed (DB stores as string)
+        if hasattr(document_id, 'hex'):
+            # It's a UUID object, convert to string
+            document_id = str(document_id)
+        elif not isinstance(document_id, str):
+            document_id = str(document_id)
+
+        result = await self.db.execute(
+            select(Document).where(Document.id == document_id)
+        )
+        return result.scalar_one_or_none()
+
+    async def get_user_documents(
+        self,
+        user_id: UUID,
+        page: int = 1,
+        page_size: int = 20
+    ) -> Tuple[List[Document], int]:
+        """Get paginated documents for user"""
+        # Count total
+        count_result = await self.db.execute(
+            select(func.count()).where(Document.user_id == user_id)
+        )
+        total = count_result.scalar()
+
+        # Get documents
+        offset = (page - 1) * page_size
+        result = await self.db.execute(
+            select(Document)
+            .where(Document.user_id == user_id)
+            .where(Document.status != DocumentStatus.DELETED)
+            .order_by(Document.created_at.desc())
+            .offset(offset)
+            .limit(page_size)
+        )
+        documents = result.scalars().all()
+
+        return list(documents), total
+
+    async def get_file_path(self, document_id: UUID) -> Optional[Path]:
+        """Get file path for download (checks both upload and processed storage)"""
+        document = await self.get_by_id(document_id)
+        if not document:
+            return None
+
+        # Check UPLOAD_DIR first
+        file_path = settings.UPLOAD_DIR / document.storage_key
+        if file_path.exists():
+            return file_path
+
+        # Check PROCESSED_DIR for generated/secured documents
+        proc_path = settings.PROCESSED_DIR / document.storage_key
+        if proc_path.exists():
+            return proc_path
+
+        return None
+
+    async def delete(self, document_id: UUID) -> bool:
+        """Delete document and file"""
+        document = await self.get_by_id(document_id)
+        if not document:
+            return False
+
+        # Delete file from storage (check both upload and processed directories)
+        for directory in [settings.UPLOAD_DIR, settings.PROCESSED_DIR]:
+            file_path = directory / document.storage_key
+            if file_path.exists():
+                try:
+                    os.remove(file_path)
+                except OSError:
+                    pass
+
+        # Mark as deleted and commit
+        document.status = DocumentStatus.DELETED
+        await self.db.commit()
+
+        return True
+
+    async def update_page_count(self, document_id: UUID, page_count: int) -> None:
+        """Update document page count"""
+        document = await self.get_by_id(document_id)
+        if document:
+            document.page_count = page_count
+            await self.db.commit()
